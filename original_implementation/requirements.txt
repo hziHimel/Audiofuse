@@ -1,0 +1,27 @@
+# ===================================================================
+# Requirements file for the AudioFuse project
+# ===================================================================
+
+# Core Deep Learning and ML Frameworks
+tensorflow==2.18.0
+tensorflow-hub==0.16.1
+scikit-learn==1.4.2
+
+# Data Handling and Manipulation
+pandas==2.2.2
+numpy==1.26.4
+
+# Audio and Signal Processing Libraries
+librosa==0.10.2
+PyWavelets==1.6.0  # For Scalogram Generation
+
+# Image Processing (for resizing spectrograms)
+opencv-python-headless==4.9.0.80
+
+# Plotting and Visualization
+matplotlib==3.8.4
+seaborn==0.13.2
+
+# Utilities
+tqdm==4.66.4      # For progress bars
+joblib==1.4.2     # For potential parallel processing optimizations

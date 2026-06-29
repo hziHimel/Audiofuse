@@ -1,0 +1,2 @@
+# AudioFuse
+The notebooks in this folder contain the preprocessing pipelines for our proposed **AudioFuse** and also its baseline models. We used the PhysioNet 2016 Challenge dataset and the PASCAL dataset (Heart Sound Classification/Abnormality Detection). The audio files were converted to Spectrograms and Scalograms here, creating 2-channel npy images. We also ensured no data leakage through data cleaning.

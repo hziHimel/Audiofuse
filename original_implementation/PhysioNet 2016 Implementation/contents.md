@@ -1,0 +1,2 @@
+# **AudioFuse**
+The notebook in this folder contains the end-to-end implementation of our proposed **AudioFuse** and also its baseline models for comparision. We used the PhysioNet 2016 Challenge dataset (Heart Sound Classification/Abnormality Detection) to implement it. The audio files were converted to Spectrograms and Scalograms in a separate Preprocessing script (available in the same GitHub Repository).
