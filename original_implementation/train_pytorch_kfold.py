@@ -1,7 +1,7 @@
 """
-AudioFuse — 5-Fold Cross-Validation wrapper (Direction 1.1)
+AudioFuse — 3-Fold Cross-Validation wrapper (Direction 1.1)
 
-Runs StratifiedKFold(n_splits=5) over a combined dataset to produce mean ± std
+Runs StratifiedKFold(n_splits=3) over a combined dataset to produce mean ± std
 estimates for Accuracy, F1, ROC-AUC, and MCC. Each fold uses the standard
 BCE + pos_weight loss from the base training script.
 
@@ -32,7 +32,8 @@ from tqdm import tqdm
 from train_pytorch import Config, PCGDataset, AudioFuse, sweep_threshold, DEVICE
 
 C = Config()
-N_SPLITS = 5
+N_SPLITS = 3
+KFOLD_PATIENCE = 8  # reduced from 15 to cut training time per fold
 
 
 def run_epoch(model, loader, optimizer, pos_weight, train=True):
@@ -66,7 +67,7 @@ def run_epoch(model, loader, optimizer, pos_weight, train=True):
 
 
 def train_one_fold(fold_idx: int, train_df: pd.DataFrame, val_df: pd.DataFrame,
-                   seed: int, output_dir: str) -> dict:
+                   seed: int, output_dir: str, patience: int = KFOLD_PATIENCE) -> dict:
     torch.manual_seed(seed + fold_idx)  # different seed per fold for reproducibility
     np.random.seed(seed + fold_idx)
 
@@ -102,7 +103,7 @@ def train_one_fold(fold_idx: int, train_df: pd.DataFrame, val_df: pd.DataFrame,
             epochs_no_improve = 0
         else:
             epochs_no_improve += 1
-            if epochs_no_improve >= C.PATIENCE:
+            if epochs_no_improve >= KFOLD_PATIENCE:
                 print(f"  Fold {fold_idx}: early stopping at epoch {epoch}")
                 break
 
@@ -154,6 +155,7 @@ def main():
     parser.add_argument("--output_dir", default="outputs/pytorch_kfold/")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--n_splits", type=int, default=N_SPLITS)
+    parser.add_argument("--patience", type=int, default=KFOLD_PATIENCE)
     args = parser.parse_args()
 
     print(f"Using device: {DEVICE}")
@@ -176,14 +178,14 @@ def main():
         train_df = data_df.iloc[train_idx].reset_index(drop=True)
         val_df = data_df.iloc[val_idx].reset_index(drop=True)
         print(f"  Train: {len(train_df)} | Val: {len(val_df)}")
-        result = train_one_fold(fold_idx + 1, train_df, val_df, args.seed, args.output_dir)
+        result = train_one_fold(fold_idx + 1, train_df, val_df, args.seed, args.output_dir, args.patience)
         fold_results.append(result)
 
     results_df = pd.DataFrame(fold_results)
     results_df.to_csv(os.path.join(args.output_dir, "fold_results.csv"), index=False)
 
     print(f"\n{'='*60}")
-    print(f"5-Fold CV Summary (mean ± std, threshold=0.50):")
+    print(f"{args.n_splits}-Fold CV Summary (mean ± std, threshold=0.50):")
     for col in ["accuracy", "f1", "roc_auc", "mcc"]:
         print(f"  {col:12s}: {results_df[col].mean():.4f} ± {results_df[col].std():.4f}")
     print(f"\n5-Fold CV Summary (mean ± std, optimal threshold):")

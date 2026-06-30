@@ -18,7 +18,7 @@
 ### 1.1 Better Training Strategies
 
 - [x] Implement 5-fold cross-validation wrapper around the existing PyTorch training loop — `train_pytorch_kfold.py`; StratifiedKFold(5), reports mean ± std at fixed + optimal thresholds (2026-06-28)
-- [ ] After each fold, record per-fold Accuracy, F1, ROC-AUC, MCC and compute mean ± std [pending GPU run]
+- [x] After each fold, record per-fold Accuracy, F1, ROC-AUC, MCC and compute mean ± std — 3-fold CV complete; AUC 0.9243 ± 0.0096 (2026-06-30)
 - [x] Sweep decision threshold on val set (0.1 to 0.9, step 0.05) and report at optimal-F1 threshold — `sweep_threshold()` added to train_pytorch.py; 4 tests pass (2026-06-28)
 - [x] Replace BCE + pos_weight with Focal Loss (α=0.25, γ=2.0) and retrain AudioFuse — `train_pytorch_focal.py` + `losses.py`; 7 tests pass (2026-06-28)
 - [x] Compare Focal Loss run vs pos_weight BCE run on same seed and fold — focal slightly worse on seed=1; within noise range (2026-06-29)

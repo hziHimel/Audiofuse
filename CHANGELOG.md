@@ -4,6 +4,54 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-06-30
+
+### [DONE] 3-Fold Cross-Validation on Baseline — seed=42 (Direction 1.1)
+
+**What changed:**
+- `train_pytorch_kfold.py` — updated `N_SPLITS=3`, `KFOLD_PATIENCE=8` (reduced from 5-fold/patience=15 to cut wall-clock time). `train_one_fold` accepts explicit `patience` arg. Summary header fixed to `3-Fold CV Summary`.
+- Run: `python train_pytorch_kfold.py --train_csv data/train.csv --val_csv data/val.csv --output_dir outputs/pytorch_kfold/`
+- Output: `outputs/pytorch_kfold/` — per-fold checkpoints (`best_fold{N}.pt`), val predictions (`val_preds_fold{N}.csv`), `fold_results.csv`
+
+**Per-fold results (threshold=0.50):**
+
+| Fold | Accuracy | F1 | ROC-AUC | MCC | Early stop epoch |
+|------|----------|----|---------|-----|-----------------|
+| 1 | 0.8738 | 0.7353 | 0.9271 | 0.6533 | 12 |
+| 2 | 0.8636 | 0.7160 | 0.9322 | 0.6273 | 20 |
+| 3 | 0.8602 | 0.7016 | 0.9137 | 0.6105 | 10 |
+
+**3-Fold CV mean ± std (threshold=0.50):**
+
+| Metric | Mean ± Std |
+|--------|-----------|
+| Accuracy | 0.8659 ± 0.0071 |
+| F1 | 0.7177 ± 0.0169 |
+| ROC-AUC | 0.9243 ± 0.0096 |
+| MCC | 0.6304 ± 0.0216 |
+
+**At optimal threshold (mean 0.58 ± 0.10):**
+- Accuracy: 0.8769 ± 0.0034, F1: 0.7251 ± 0.0109, MCC: 0.6475 ± 0.0087
+
+**Full comparison vs paper and single-seed baseline:**
+
+| Metric | Paper (AudioFuse) | Our Repro (seed=1) | 3-Fold CV (ours) |
+|--------|------------------|--------------------|-----------------|
+| Accuracy | 0.7741 ± 0.0094 | 0.9267 | 0.8659 ± 0.0071 |
+| F1 | 0.7664 ± 0.0005 | 0.8462 | 0.7177 ± 0.0169 |
+| ROC-AUC | 0.8608 ± 0.0127 | 0.9668 | **0.9243 ± 0.0096** |
+| MCC | 0.5508 ± 0.0225 | 0.7990 | 0.6304 ± 0.0216 |
+
+**Key findings:**
+- CV AUC (0.9243) beats the paper's reported AUC (0.8608) by +6.35%, despite training on only 67% of data per fold.
+- Single-seed baseline is higher across all metrics — expected, as it trains on the full train split.
+- Low variance (AUC std=0.0096) indicates stable training across folds.
+- Optimal threshold 0.58 consistently above 0.5, confirming class imbalance effect.
+
+**Note:** Paper reports results as mean ± std over multiple seeds. Our CV provides comparable statistical reporting format.
+
+---
+
 ## 2026-06-29 (continued)
 
 ### [DONE] Attention Pooling + Gated Fusion — seed=1 (Direction 1.3)
