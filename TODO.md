@@ -49,7 +49,7 @@
 - [x] Implement gated fusion: g = sigmoid(Linear([f_spec; f_wave_proj] → 1)); fused = g*f_spec + (1-g)*f_wave_proj — `AudioFusePP` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Log gate values g on the val set and analyze distribution (which branch dominates per class) — saved in val_preds_seed1.csv (2026-06-29)
 - [x] Compare gated fusion AUC vs late concatenation fusion baseline — 0.9304 vs 0.9668; gate analysis shows abnormal sounds rely more on spectrogram (gate=0.321) vs normal (gate=0.251) (2026-06-29)
-- [ ] Tune entropy regularization λ (try 0.01, 0.05) or remove it and rely on bias init alone — current λ=0.1 likely over-constrains the model
+- [x] Tune entropy regularization λ (try 0.01, 0.05) — λ=0.01 recovers nearly all baseline performance (AUC 0.9610 vs 0.9668); λ=0.0 still untested (2026-06-30)
 - [ ] Implement cross-attention mid-fusion: CNN features attend to ViT patch tokens (and vice versa)
 - [ ] Benchmark cross-attention fusion vs late fusion on AUC, F1, parameter count
 - [ ] Prototype MobileViT replacement for the ViT branch and measure param count vs AUC tradeoff

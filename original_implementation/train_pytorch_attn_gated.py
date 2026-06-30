@@ -88,7 +88,7 @@ class AudioFusePP(nn.Module):
 
 
 # ── Training helpers ─────────────────────────────────────────────────────────
-def run_epoch(model, loader, optimizer, pos_weight, train=True):
+def run_epoch(model, loader, optimizer, pos_weight, train=True, lambda_entropy=0.1):
     model.train(train)
     total_loss, all_probs, all_labels, all_gates = 0.0, [], [], []
 
@@ -101,13 +101,13 @@ def run_epoch(model, loader, optimizer, pos_weight, train=True):
             logits, gates = model(spec, wave)
             loss = F.binary_cross_entropy_with_logits(logits, labels, pos_weight=pos_weight)
             if train:
-                # Entropy regularization: penalise gate being near 0 or 1.
-                # H(g) = -(g*log(g) + (1-g)*log(1-g)), maximised at g=0.5.
-                # We minimise -H(g) * lambda to push gate toward 0.5.
-                eps = 1e-6
-                gate_entropy = -(gates * (gates + eps).log() +
-                                 (1 - gates) * (1 - gates + eps).log()).mean()
-                loss = loss - 0.1 * gate_entropy  # lambda=0.1
+                if lambda_entropy > 0.0:
+                    # Entropy regularization: penalise gate being near 0 or 1.
+                    # H(g) = -(g*log(g) + (1-g)*log(1-g)), maximised at g=0.5.
+                    eps = 1e-6
+                    gate_entropy = -(gates * (gates + eps).log() +
+                                     (1 - gates) * (1 - gates + eps).log()).mean()
+                    loss = loss - lambda_entropy * gate_entropy
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -125,7 +125,7 @@ def run_epoch(model, loader, optimizer, pos_weight, train=True):
     return avg_loss, acc, auc, np.array(all_gates)
 
 
-def train_one_seed(args, seed: int):
+def train_one_seed(args, seed: int, lambda_entropy: float = 0.1):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -156,8 +156,8 @@ def train_one_seed(args, seed: int):
         print(f"Resumed from checkpoint: {best_ckpt}")
 
     for epoch in range(1, C.EPOCHS + 1):
-        tr_loss, tr_acc, tr_auc, _ = run_epoch(model, train_loader, optimizer, pos_weight, train=True)
-        vl_loss, vl_acc, vl_auc, vl_gates = run_epoch(model, val_loader, optimizer, pos_weight, train=False)
+        tr_loss, tr_acc, tr_auc, _ = run_epoch(model, train_loader, optimizer, pos_weight, train=True, lambda_entropy=lambda_entropy)
+        vl_loss, vl_acc, vl_auc, vl_gates = run_epoch(model, val_loader, optimizer, pos_weight, train=False, lambda_entropy=lambda_entropy)
         scheduler.step(vl_loss)
 
         print(f"Epoch {epoch:3d} | "
@@ -240,14 +240,17 @@ def main():
     parser.add_argument("--val_csv", default="data/val.csv")
     parser.add_argument("--output_dir", default="outputs/pytorch_attn_gated/")
     parser.add_argument("--seeds", nargs="+", type=int, default=[1])
+    parser.add_argument("--lambda_entropy", type=float, default=0.1,
+                        help="Entropy regularization weight for gate (0.0 = disabled)")
     args = parser.parse_args()
 
     print(f"Using device: {DEVICE}")
 
+    print(f"lambda_entropy = {args.lambda_entropy}")
     all_results = []
     for seed in args.seeds:
         print(f"\n{'#'*60}\n# Training with seed={seed} [ATTN POOL + GATED FUSION]\n{'#'*60}")
-        all_results.append(train_one_seed(args, seed))
+        all_results.append(train_one_seed(args, seed, lambda_entropy=args.lambda_entropy))
 
     results_df = pd.DataFrame(all_results)
     if len(all_results) > 1:

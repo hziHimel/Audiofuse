@@ -4,6 +4,35 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-06-30 (continued)
+
+### [DONE] Gated Fusion λ tuning — λ=0.01 vs λ=0.1 (Direction 1.3)
+
+**What changed:**
+- `train_pytorch_attn_gated.py` — added `--lambda_entropy` CLI arg (default 0.1). `run_epoch` and `train_one_seed` now accept `lambda_entropy` parameter; entropy reg skipped entirely when λ=0.0.
+- Run: `python train_pytorch_attn_gated.py --seeds 1 --lambda_entropy 0.01 --output_dir outputs/pytorch_attn_gated_lambda001/`
+- Early stopped at epoch 37.
+
+**Results comparison:**
+
+| Metric | Baseline (seed=1) | λ=0.1 (original) | λ=0.01 (new) | Δ vs λ=0.1 |
+|--------|------------------|-----------------|--------------|------------|
+| Accuracy | 0.9267 | 0.8858 | **0.9238** | +0.0380 |
+| F1 | 0.8462 | 0.7429 | **0.8235** | +0.0806 |
+| ROC-AUC | 0.9668 | 0.9304 | **0.9610** | +0.0306 |
+| MCC | 0.7990 | 0.6702 | **0.7779** | +0.1077 |
+
+At optimal threshold (0.30): Acc=0.9252, F1=0.8328, MCC=0.7852
+
+**Gate analysis (λ=0.01):**
+- Normal class mean gate = 0.271 → model leans toward waveform for normal sounds
+- Abnormal class mean gate = 0.076 → model strongly relies on waveform for abnormal sounds
+- Contrast with λ=0.1: gate_normal=0.251, gate_abnormal=0.321 (inverted pattern due to over-constraint)
+
+**Conclusion:** λ=0.01 recovers nearly all baseline performance while keeping the gated fusion architecture. The weaker regularization lets the model learn a meaningful gate without over-constraining it. λ=0.0 (bias-init only) still untested.
+
+---
+
 ## 2026-06-30
 
 ### [DONE] 3-Fold Cross-Validation on Baseline — seed=42 (Direction 1.1)
