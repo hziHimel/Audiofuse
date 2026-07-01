@@ -185,6 +185,10 @@ def train_one_seed(args, seed: int):
     best_val_acc    = 0.0
     epochs_no_improve = 0
 
+    if os.path.exists(best_ckpt):
+        model.load_state_dict(torch.load(best_ckpt, map_location=DEVICE))
+        print(f"Resumed from checkpoint: {best_ckpt}")
+
     for epoch in range(1, C.EPOCHS + 1):
         tr_loss, tr_acc, tr_auc = run_epoch(model, train_loader, optimizer, pos_weight, train=True)
         vl_loss, vl_acc, vl_auc = run_epoch(model, val_loader,   optimizer, pos_weight, train=False)

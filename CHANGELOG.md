@@ -4,6 +4,29 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-01
+
+### [DONE] CosineAnnealingWarmRestarts scheduler — seed=1 (Direction 1.1)
+
+**What changed:**
+- `train_pytorch_cosine.py` — new script identical to baseline except `ReduceLROnPlateau` replaced with `CosineAnnealingWarmRestarts(T_0=10, eta_min=1e-6)`. LR cycles from 3e-4 → 1e-6 every 10 epochs then restarts.
+- Early stopped at epoch 71 (4 full cosine cycles + partial 5th).
+
+**Results vs baseline (BCE+pos_weight, seed=1):**
+
+| Metric | Baseline | Cosine LR | Δ |
+|--------|----------|-----------|---|
+| Accuracy | 0.9267 | 0.9224 | -0.0043 |
+| F1 | 0.8462 | 0.8368 | -0.0094 |
+| ROC-AUC | 0.9668 | **0.9677** | +0.0009 |
+| MCC | 0.7990 | 0.7867 | -0.0123 |
+
+At optimal threshold: Acc=0.9267, F1=0.8434, MCC=0.7957
+
+**Conclusion:** Marginal AUC improvement (+0.0009) but other metrics slightly below baseline. Warm restarts help the model escape local minima (AUC improved across cycles: 0.9434 → 0.9627 → 0.9677) but the overall gain is within noise range on a single seed.
+
+---
+
 ## 2026-06-30 (continued)
 
 ### [DONE] Gated Fusion λ tuning — λ=0.01 vs λ=0.1 (Direction 1.3)

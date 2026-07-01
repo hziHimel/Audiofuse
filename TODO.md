@@ -23,7 +23,7 @@
 - [x] Replace BCE + pos_weight with Focal Loss (α=0.25, γ=2.0) and retrain AudioFuse — `train_pytorch_focal.py` + `losses.py`; 7 tests pass (2026-06-28)
 - [x] Compare Focal Loss run vs pos_weight BCE run on same seed and fold — focal slightly worse on seed=1; within noise range (2026-06-29)
 - [x] Add label smoothing (ε=0.1) to the BCE loss and measure effect on calibration — slightly hurt AUC (-0.009) on seed=1 (2026-06-29)
-- [ ] Replace ReduceLROnPlateau with CosineAnnealingWarmRestarts (T_0=10) and retrain
+- [x] Replace ReduceLROnPlateau with CosineAnnealingWarmRestarts (T_0=10) and retrain — marginal AUC gain (+0.0009); other metrics slightly below baseline (2026-07-01)
 - [ ] Implement Mixup augmentation (α=0.4) applied consistently to both spec and waveform inputs
 - [ ] Measure Mixup effect on F1 and AUC vs no-augmentation baseline
 
