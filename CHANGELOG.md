@@ -4,6 +4,50 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-03
+
+### [DONE] Multi-seed baseline — seeds 42, 0, 1, 2, 3 (Direction baseline)
+
+**What changed:**
+- Ran `train_pytorch.py` with seeds 42, 0, 2, 3 (seed=1 was already done). Resume logic loaded `best_seed2.pt` checkpoint for seed=2.
+- Used `caffeinate -i -w <PID>` to prevent macOS thermal throttling during training.
+
+**Per-seed results (threshold=0.50):**
+
+| Seed | Accuracy | F1 | ROC-AUC | MCC | Early stop epoch |
+|------|----------|----|---------|-----|-----------------|
+| 42 | 0.8745 | 0.6962 | 0.9240 | 0.6247 | 20 |
+| 0 | 0.9281 | 0.8411 | 0.9570 | 0.7948 | 65 |
+| 1 | 0.9267 | 0.8462 | 0.9668 | 0.7990 | — |
+| 2 | 0.9281 | 0.8431 | 0.9669 | 0.7964 | 50 |
+| 3 | 0.9323 | 0.8509 | 0.9669 | 0.8072 | 69 |
+
+**Mean ± std across 5 seeds (threshold=0.50):**
+
+| Metric | Mean ± Std |
+|--------|-----------|
+| Accuracy | 0.9179 ± 0.0218 |
+| F1 | 0.8155 ± 0.0597 |
+| ROC-AUC | **0.9563 ± 0.0166** |
+| MCC | 0.7644 ± 0.0700 |
+
+**Comparison vs paper:**
+
+| Metric | Paper (AudioFuse) | Ours (5-seed mean) | Δ |
+|--------|------------------|--------------------|---|
+| Accuracy | 0.7741 ± 0.0094 | 0.9179 ± 0.0218 | +0.1438 |
+| F1 | 0.7664 ± 0.0005 | 0.8155 ± 0.0597 | +0.0491 |
+| ROC-AUC | 0.8608 ± 0.0127 | **0.9563 ± 0.0166** | **+0.0955** |
+| MCC | 0.5508 ± 0.0225 | 0.7644 ± 0.0700 | +0.2136 |
+
+**Key findings:**
+- Seed 42 is a clear outlier (AUC 0.9240, F1 0.6962) — likely a bad random init. All other seeds cluster tightly at AUC 0.9570–0.9669.
+- Our 5-seed mean AUC beats the paper by +9.55 percentage points.
+- High std in F1 (0.0597) driven entirely by seed 42; excluding it gives F1=0.8453±0.0041.
+- Output: `outputs/pytorch_multiseed/` — checkpoints `best_seed{N}.pt`, val preds `val_preds_seed{N}.csv`.
+
+---
+
 ## 2026-07-01
 
 ### [DONE] CosineAnnealingWarmRestarts scheduler — seed=1 (Direction 1.1)

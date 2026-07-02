@@ -5,10 +5,10 @@
 ## Baseline (Pending from Reproduction)
 
 - [ ] Run PyTorch ViT-only branch (seed 1) — requires GPU with batch size 256+
-- [ ] Run PyTorch AudioFuse seeds 42, 0, 2, 3 (currently only seed 1 done)
+- [x] Run PyTorch AudioFuse seeds 42, 0, 2, 3 — mean AUC 0.9563 ± 0.0166 across 5 seeds (2026-07-03)
 - [ ] Run Keras AudioFuse seeds 1, 2, 3 (seed 42 done, seed 0 incomplete)
 - [ ] Rerun Keras AudioFuse seed 0 to completion
-- [ ] Aggregate mean ± std across 5 seeds for both frameworks
+- [ ] Aggregate mean ± std across 5 seeds for Keras framework
 - [ ] Update comparison.txt with full multi-seed results
 
 ---
