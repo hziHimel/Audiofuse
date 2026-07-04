@@ -4,6 +4,30 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-04 (continued 2)
+
+### [DONE] Residual CNN waveform branch — seed=1 (Direction 1.3)
+
+**What changed:**
+- `train_pytorch_rescnn.py` — new script. `WaveformResCNN` replaces the 3-block shallow CNN with `ResBlock1d` blocks that add a 1×1 Conv1d skip connection around each block. Output dim stays at 64 to keep the fusion head identical to baseline. Fixed stride/padding off-by-one in skip via `min_len` trim.
+- `test_rescnn.py` — 5 unit tests covering block shape, skip connection fires, output shape/sign, full model shape. All pass.
+- Early stopped at epoch 61. Output: `outputs/pytorch_rescnn/`
+
+**Results vs baseline (shallow CNN, seed=1):**
+
+| Metric | Baseline | Residual CNN | Δ |
+|--------|----------|--------------|---|
+| Accuracy | 0.9267 | 0.9154 | -0.0113 |
+| F1 | 0.8462 | 0.8225 | -0.0237 |
+| ROC-AUC | 0.9668 | 0.9559 | -0.0109 |
+| MCC | 0.7990 | 0.7679 | -0.0311 |
+
+At optimal threshold (0.70): Acc=0.9210, F1=0.8293, MCC=0.7779
+
+**Conclusion:** Residual CNN underperforms the shallow baseline across all metrics. Deeper architecture likely overfits on this small dataset (3541 samples). The original shallow 3-block CNN is already well-matched to the data size. Single-seed result but the gap is consistent and larger than noise.
+
+---
+
 ## 2026-07-04 (continued)
 
 ### [DONE] Dual-channel spectrogram input (log-Mel + CWT) — seed=1 (Direction 1.2)

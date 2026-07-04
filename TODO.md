@@ -45,8 +45,8 @@
 
 - [x] Replace Global Average Pooling in ViT branch with attention pooling (Linear(192,1) + softmax over patches) — `SpectrogramViTAttn` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Measure attention pooling effect on AUC vs GAP baseline (same seed) — AUC 0.9304 vs 0.9668 baseline; below baseline, likely due to entropy reg constraining model (2026-06-29)
-- [ ] Implement deeper waveform CNN with residual (skip) connections between the 3 blocks
-- [ ] Train residual CNN branch alone and compare vs original shallow CNN branch
+- [x] Implement deeper waveform CNN with residual (skip) connections between the 3 blocks — `train_pytorch_rescnn.py`; 5 tests pass (2026-07-04)
+- [x] Train residual CNN branch and compare vs original shallow CNN — AUC 0.9559 vs 0.9668 baseline (-0.0109); deeper arch overfits on small dataset (2026-07-04)
 - [x] Implement gated fusion: g = sigmoid(Linear([f_spec; f_wave_proj] → 1)); fused = g*f_spec + (1-g)*f_wave_proj — `AudioFusePP` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Log gate values g on the val set and analyze distribution (which branch dominates per class) — saved in val_preds_seed1.csv (2026-06-29)
 - [x] Compare gated fusion AUC vs late concatenation fusion baseline — 0.9304 vs 0.9668; gate analysis shows abnormal sounds rely more on spectrogram (gate=0.321) vs normal (gate=0.251) (2026-06-29)
