@@ -4,6 +4,30 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-04 (continued)
+
+### [DONE] Dual-channel spectrogram input (log-Mel + CWT) — seed=1 (Direction 1.2)
+
+**What changed:**
+- `train_pytorch_dualchan.py` — new script. `PCGDatasetDual` loads both `.npy` channels → `(2, H, W)`. `AudioFuseDual` replaces the ViT patch embedding `Conv2d(1→192)` with `Conv2d(2→192)`; rest of architecture unchanged.
+- Matches the original authors' preprocessing intent (`preprocess.py` saves `(H, W, 2)` with channel 0=log-Mel, channel 1=CWT scalogram).
+- Early stopped at epoch 50. Output: `outputs/pytorch_dualchan/`
+
+**Results vs baseline (single-channel log-Mel, seed=1):**
+
+| Metric | Baseline (ch0) | Dual-channel | Δ |
+|--------|---------------|--------------|---|
+| Accuracy | 0.9267 | 0.9224 | -0.0043 |
+| F1 | 0.8462 | 0.8265 | -0.0197 |
+| ROC-AUC | 0.9668 | 0.9644 | -0.0024 |
+| MCC | 0.7990 | 0.7771 | -0.0219 |
+
+At optimal threshold (0.40): Acc=0.9224, F1=0.8308, MCC=0.7805
+
+**Conclusion:** Adding the CWT scalogram channel slightly hurts all metrics on seed=1. The ViT may treat the two channels as independent patches rather than learning cross-channel structure. The scalogram appears to add noise rather than complementary signal at this scale. Single-seed result — within noise range, but the trend is consistent with similar regularization experiments.
+
+---
+
 ## 2026-07-04
 
 ### [DONE] Gated Fusion λ=0.0 (no entropy reg) — seed=1 (Direction 1.3)

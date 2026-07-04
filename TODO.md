@@ -33,6 +33,7 @@
 - [ ] Compare MFCC vs log-Mel ROC-AUC on the same train/val split
 - [ ] Implement Gammatone filterbank and generate spectrograms for all PhysioNet recordings
 - [ ] Train ViT branch on Gammatone spectrograms and compare vs log-Mel baseline
+- [x] Use both .npy channels (log-Mel + CWT scalogram) as 2-channel ViT input — `train_pytorch_dualchan.py`; AUC 0.9644 vs 0.9668 baseline (-0.0024); scalogram adds noise not signal (2026-07-04)
 - [ ] Add short-time energy envelope as a 3rd channel to the spectrogram input (make it 224×224×3)
 - [ ] Restrict CWT scales to 20–500 Hz range with logarithmic spacing and regenerate scalograms
 - [ ] Retrain waveform branch on new CWT scalograms and compare AUC vs current
