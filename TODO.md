@@ -121,9 +121,9 @@
 
 ### 3.1 Contribution Analysis
 
-- [ ] For each val sample, run 3 forward passes: full model, spec-zeroed, wave-zeroed
-- [ ] Compute per-sample branch dominance (which branch drives the correct prediction)
-- [ ] Aggregate branch dominance stats across val set by class (normal vs abnormal)
+- [x] For each val sample, run 3 forward passes: full model, spec-zeroed, wave-zeroed — `branch_ablation.py` (2026-07-04)
+- [x] Compute per-sample branch dominance (which branch drives the correct prediction) — wave-dominant: 99.6% normal, 96.3% abnormal (2026-07-04)
+- [x] Aggregate branch dominance stats across val set by class — wave-only AUC=0.9667 ≈ full model; spec-only AUC=0.4588 (worse than random); ViT branch contributes almost nothing (2026-07-04)
 - [ ] Implement Integrated Gradients on each branch output and compute per-branch attribution scores
 - [ ] Visualize GradCAM attribution maps for normal vs abnormal samples from the ViT branch
 - [ ] Run SHAP on the fusion head treating [f_spec (192-dim); f_wave (64-dim)] as input features

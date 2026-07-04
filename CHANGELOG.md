@@ -4,6 +4,38 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-04 (continued 3)
+
+### [DONE] Branch Contribution Ablation — seed=1 baseline (Direction 3.1)
+
+**What changed:**
+- `branch_ablation.py` — new script. Loads `outputs/pytorch/best_seed1.pt` and runs 3 forward passes on the val set: full model, spec-zeroed (wave only), wave-zeroed (spec only). Reports per-condition AUC/Acc and per-class branch dominance statistics.
+- Output: `outputs/pytorch_ablation/ablation_results.csv`
+
+**Results:**
+
+| Condition | AUC | Accuracy |
+|-----------|-----|----------|
+| Full model | 0.9668 | 0.9267 |
+| Wave only (spec=0) | **0.9667** | 0.9281 |
+| Spec only (wave=0) | 0.4588 | 0.2299 |
+
+**Branch dominance by class:**
+
+| Class | Spec-dominant | Wave-dominant | Mean drop (spec removed) | Mean drop (wave removed) |
+|-------|--------------|--------------|--------------------------|--------------------------|
+| Normal (n=546) | 0.4% (2/546) | 99.6% (544/546) | 0.0034 | 0.8471 |
+| Abnormal (n=163) | 3.7% (6/163) | 96.3% (157/163) | 0.0066 | 0.1708 |
+
+**Key findings:**
+- **Waveform CNN carries virtually all predictive signal**: wave-only AUC (0.9667) nearly matches the full model (0.9668).
+- **ViT spectrogram branch contributes almost nothing**: spec-only AUC (0.4588) is worse than random, meaning the ViT branch alone cannot classify.
+- The full model's marginal gain over wave-only is negligible (+0.0001 AUC).
+- This is a critical finding: the dual-branch architecture is effectively a single-branch waveform model in practice. The ViT is either undertrained, or the spectrogram representation (single-channel log-Mel, no pretraining) is too weak for the ViT to learn from on this dataset size.
+- **Implication for future work**: improving the ViT branch (pretrained weights, MFCC, better augmentation) is the highest-leverage direction. The gated fusion result (gate→waveform) is now fully explained.
+
+---
+
 ## 2026-07-04 (continued 2)
 
 ### [DONE] Residual CNN waveform branch — seed=1 (Direction 1.3)
