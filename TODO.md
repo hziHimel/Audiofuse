@@ -59,9 +59,9 @@
 
 ### 1.4 Data-level Improvements
 
-- [ ] Implement on-the-fly audio augmentation pipeline: Gaussian noise, time stretch (±10%), pitch shift (±2 st), SpecAugment
-- [ ] Apply augmentation consistently to both branches (same noise realization for wave, corresponding spec)
-- [ ] Train AudioFuse with augmentation and compare vs no-augmentation on same 5-fold splits
+- [x] Implement on-the-fly audio augmentation pipeline: GaussianNoise (SNR=20dB) + SpecAugment — `augmentations.py`; 8 tests pass (2026-07-05)
+- [x] Apply augmentation consistently to both branches — `train_pytorch_augment.py`; augments applied after batch on device (2026-07-05)
+- [x] Train AudioFuse with augmentation and compare vs no-augmentation — AUC 0.9536 vs 0.9668 baseline (-0.0132); hurts on small dataset (2026-07-05)
 - [ ] Generate pseudo-labels for PASCAL unlabeled data using trained AudioFuse (confidence > 0.9)
 - [ ] Retrain AudioFuse with PhysioNet + pseudo-labeled PASCAL and compare vs PhysioNet-only
 

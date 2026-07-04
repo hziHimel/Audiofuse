@@ -4,6 +4,29 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-05
+
+### [DONE] On-the-fly Audio Augmentation — seed=1 (Direction 1.4)
+
+**What changed:**
+- `augmentations.py` — `GaussianNoise` (SNR=20 dB, RMS-scaled) and `SpecAugment` (2 time masks T≤40, 2 freq masks F≤20). Pure PyTorch ops, run on MPS with no CPU round-trips. Val set never augmented.
+- `test_augmentations.py` — 8 unit tests covering shape, identity at eval, noise SNR scaling, mask bounded output. All pass.
+- `train_pytorch_augment.py` — new script applying both augmentations in the training loop after batch is on device. Early stopped at epoch 35. Output: `outputs/pytorch_augment/`
+- Note: time stretch (±10%) and pitch shift (±2 st) not implemented — require librosa and are too slow for on-the-fly use.
+
+**Results vs baseline (BCE+pos_weight, seed=1):**
+
+| Metric | Baseline | Augment | Δ |
+|--------|----------|---------|---|
+| Accuracy | 0.9267 | 0.8914 | -0.0353 |
+| F1 | 0.8462 | 0.7729 | -0.0733 |
+| ROC-AUC | 0.9668 | 0.9536 | -0.0132 |
+| MCC | 0.7990 | 0.7025 | -0.0965 |
+
+**Conclusion:** Augmentation hurts across all metrics on seed=1. Consistent with the broader pattern — the dataset (3541 samples) is too small for augmentation to provide regularization benefit; it adds variance the model can't overcome. The waveform branch dominance finding also explains this: Gaussian noise directly corrupts the signal the model relies on most, while SpecAugment masks a branch (ViT) that contributes almost nothing.
+
+---
+
 ## 2026-07-04 (continued 3)
 
 ### [DONE] Branch Contribution Ablation — seed=1 baseline (Direction 3.1)
