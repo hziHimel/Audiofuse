@@ -4,6 +4,50 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-04
+
+### [DONE] Gated Fusion λ=0.0 (no entropy reg) — seed=1 (Direction 1.3)
+
+**What changed:**
+- Ran `train_pytorch_attn_gated.py --lambda_entropy 0.0 --seeds 1 --output_dir outputs/pytorch_attn_gated_lambda000/`
+- No entropy regularization; gate initialized with zero bias (g=0.5 at start).
+- Early stopped at epoch 19.
+
+**Results vs baseline and other λ values:**
+
+| λ | AUC | Gate behavior |
+|---|-----|---------------|
+| 0.0 (new) | 0.9302 | gate→0.003 (collapsed to waveform) |
+| 0.01 | 0.9610 | meaningful distribution |
+| 0.1 | 0.9304 | over-constrained |
+| baseline (no gate) | 0.9668 | — |
+
+**Conclusion:** Without entropy regularization the gate collapses to near-zero, meaning the model ignores the spectrogram branch entirely. Performance matches λ=0.1 (both ~0.93) but for opposite reasons: λ=0.1 over-constrains, λ=0.0 under-constrains. λ=0.01 is the sweet spot — confirms entropy reg is necessary for meaningful gated fusion.
+
+---
+
+### [DONE] Mixup augmentation α=0.4 — seed=1 (Direction 1.1)
+
+**What changed:**
+- `train_pytorch_mixup.py` — new script. Same as baseline except training batches are mixed via Mixup (α=0.4). Same λ applied to both spec and waveform inputs for consistency. Val is unchanged.
+- `test_mixup.py` — 5 unit tests covering shapes, λ range, convex combination, same-λ for both modalities, α→0 identity. All pass.
+- Early stopped at epoch 59. Output: `outputs/pytorch_mixup/`
+
+**Results vs baseline (BCE+pos_weight, seed=1):**
+
+| Metric | Baseline | Mixup α=0.4 | Δ |
+|--------|----------|-------------|---|
+| Accuracy | 0.9267 | 0.9182 | -0.0085 |
+| F1 | 0.8462 | 0.8232 | -0.0230 |
+| ROC-AUC | 0.9668 | 0.9630 | -0.0038 |
+| MCC | 0.7990 | 0.7700 | -0.0290 |
+
+Optimal threshold stayed at 0.50.
+
+**Conclusion:** Mixup slightly hurts all metrics on seed=1. Consistent pattern with focal loss and label smoothing — regularization techniques that help on large datasets don't clearly benefit this smaller dataset (3541 samples). Differences are within single-seed noise range; multi-seed CV needed for firm conclusions.
+
+---
+
 ## 2026-07-03
 
 ### [DONE] Multi-seed baseline — seeds 42, 0, 1, 2, 3 (Direction baseline)

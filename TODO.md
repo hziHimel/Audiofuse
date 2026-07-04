@@ -24,8 +24,8 @@
 - [x] Compare Focal Loss run vs pos_weight BCE run on same seed and fold — focal slightly worse on seed=1; within noise range (2026-06-29)
 - [x] Add label smoothing (ε=0.1) to the BCE loss and measure effect on calibration — slightly hurt AUC (-0.009) on seed=1 (2026-06-29)
 - [x] Replace ReduceLROnPlateau with CosineAnnealingWarmRestarts (T_0=10) and retrain — marginal AUC gain (+0.0009); other metrics slightly below baseline (2026-07-01)
-- [ ] Implement Mixup augmentation (α=0.4) applied consistently to both spec and waveform inputs
-- [ ] Measure Mixup effect on F1 and AUC vs no-augmentation baseline
+- [x] Implement Mixup augmentation (α=0.4) applied consistently to both spec and waveform inputs — `train_pytorch_mixup.py`; 5 tests pass (2026-07-04)
+- [x] Measure Mixup effect on F1 and AUC vs no-augmentation baseline — AUC 0.9630 vs 0.9668 baseline (-0.0038); within noise on seed=1 (2026-07-04)
 
 ### 1.2 Preprocessing Improvements
 
@@ -49,7 +49,7 @@
 - [x] Implement gated fusion: g = sigmoid(Linear([f_spec; f_wave_proj] → 1)); fused = g*f_spec + (1-g)*f_wave_proj — `AudioFusePP` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Log gate values g on the val set and analyze distribution (which branch dominates per class) — saved in val_preds_seed1.csv (2026-06-29)
 - [x] Compare gated fusion AUC vs late concatenation fusion baseline — 0.9304 vs 0.9668; gate analysis shows abnormal sounds rely more on spectrogram (gate=0.321) vs normal (gate=0.251) (2026-06-29)
-- [x] Tune entropy regularization λ (try 0.01, 0.05) — λ=0.01 recovers nearly all baseline performance (AUC 0.9610 vs 0.9668); λ=0.0 still untested (2026-06-30)
+- [x] Tune entropy regularization λ (try 0.0, 0.01, 0.1) — λ=0.01 is optimal; λ=0.0 collapses gate, λ=0.1 over-constrains (2026-07-04)
 - [ ] Implement cross-attention mid-fusion: CNN features attend to ViT patch tokens (and vice versa)
 - [ ] Benchmark cross-attention fusion vs late fusion on AUC, F1, parameter count
 - [ ] Prototype MobileViT replacement for the ViT branch and measure param count vs AUC tradeoff
