@@ -29,8 +29,8 @@
 
 ### 1.2 Preprocessing Improvements
 
-- [ ] Add MFCC (n_mfcc=40) as an alternative input to log-Mel spectrogram and retrain ViT branch
-- [ ] Compare MFCC vs log-Mel ROC-AUC on the same train/val split
+- [x] Add MFCC (n_mfcc=40) as an alternative input to log-Mel spectrogram and retrain — `train_pytorch_mfcc.py` (2026-07-05)
+- [x] Compare MFCC vs log-Mel ROC-AUC — MFCC AUC 0.9621 vs log-Mel 0.9668 (-0.0047); branch ablation shows ViT still 100% wave-dominant (2026-07-05)
 - [ ] Implement Gammatone filterbank and generate spectrograms for all PhysioNet recordings
 - [ ] Train ViT branch on Gammatone spectrograms and compare vs log-Mel baseline
 - [x] Use both .npy channels (log-Mel + CWT scalogram) as 2-channel ViT input — `train_pytorch_dualchan.py`; AUC 0.9644 vs 0.9668 baseline (-0.0024); scalogram adds noise not signal (2026-07-04)
@@ -42,6 +42,10 @@
 - [ ] Train AudioFuse on per-cycle segments and compare vs fixed 5-second clip baseline
 
 ### 1.3 Architecture Improvements
+
+- [ ] Pre-train each branch independently (ViT on spectrogram-only classification, CNN on waveform-only classification); save branch weights separately
+- [ ] Initialize AudioFuse fusion model with pretrained branch weights, then fine-tune end-to-end — tests whether independent pretraining prevents waveform branch from dominating and forces ViT to contribute
+- [ ] Compare branch ablation AUC (spec-only, wave-only) before vs after pretrained init to verify both branches are activated
 
 - [x] Replace Global Average Pooling in ViT branch with attention pooling (Linear(192,1) + softmax over patches) — `SpectrogramViTAttn` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Measure attention pooling effect on AUC vs GAP baseline (same seed) — AUC 0.9304 vs 0.9668 baseline; below baseline, likely due to entropy reg constraining model (2026-06-29)

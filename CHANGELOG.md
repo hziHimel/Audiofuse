@@ -4,6 +4,39 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-05 (continued)
+
+### [DONE] MFCC spectrogram input — seed=1 (Direction 1.2)
+
+**What changed:**
+- `train_pytorch_mfcc.py` — new script. `MFCCDataset` computes MFCC (n_mfcc=40) on-the-fly from wav files via librosa, normalizes, bilinearly resizes to (1,224,224). Same ViT + CNN + fusion head as baseline. Slower than baseline (~1 it/s vs 3.6) due to on-the-fly CPU MFCC computation.
+- Early stopped at epoch 41 (resumed run). Output: `outputs/pytorch_mfcc/`
+
+**Results vs baseline (log-Mel, seed=1):**
+
+| Metric | Baseline (log-Mel) | MFCC | Δ |
+|--------|-------------------|------|---|
+| Accuracy | 0.9267 | 0.9252 | -0.0015 |
+| F1 | 0.8462 | 0.8399 | -0.0063 |
+| ROC-AUC | 0.9668 | 0.9621 | -0.0047 |
+| MCC | 0.7990 | 0.7913 | -0.0077 |
+
+At optimal threshold (0.55): Acc=0.9281, F1=0.8450, MCC=0.7982
+
+**Branch ablation on MFCC model:**
+
+| Condition | log-Mel model | MFCC model |
+|-----------|--------------|------------|
+| Full model AUC | 0.9668 | 0.9621 |
+| Wave only (spec=0) AUC | 0.9667 | 0.9621 |
+| Spec only (wave=0) AUC | 0.4588 | **0.5913** |
+| Spec-dominant (normal) | 0.4% | 0% |
+| Spec-dominant (abnormal) | 3.7% | 0% |
+
+**Conclusion:** MFCC is nearly competitive with log-Mel (-0.0047 AUC). MFCC spec-only AUC improved (0.4588→0.5913), suggesting MFCC gives the ViT slightly more useful signal. However, the waveform branch still completely dominates — 100% of samples are wave-dominant. The fundamental issue (joint training lets CNN dominate gradients) persists regardless of spectrogram type. Next step: pretrained branch initialization to force both branches to contribute.
+
+---
+
 ## 2026-07-05
 
 ### [DONE] On-the-fly Audio Augmentation — seed=1 (Direction 1.4)
