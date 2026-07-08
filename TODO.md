@@ -43,7 +43,8 @@
 
 ### 1.3 Architecture Improvements
 
-- [ ] Pre-train each branch independently (ViT on spectrogram-only classification, CNN on waveform-only classification); save branch weights separately
+- [x] Pre-train waveform CNN branch independently — `train_pytorch_waveonly.py`; wave-only AUC=0.9331 (vs 0.9667 from ablation on joint model); CNN weights saved at `outputs/pytorch_waveonly/best_seed1.pt` (2026-07-08)
+- [ ] Pre-train ViT branch independently (spectrogram-only classifier); save ViT weights separately
 - [ ] Initialize AudioFuse fusion model with pretrained branch weights, then fine-tune end-to-end — tests whether independent pretraining prevents waveform branch from dominating and forces ViT to contribute
 - [ ] Compare branch ablation AUC (spec-only, wave-only) before vs after pretrained init to verify both branches are activated
 

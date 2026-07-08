@@ -4,6 +4,32 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-08
+
+### [DONE] Waveform-Only Baseline — seed=1 (Direction 3.1 / pretrained branch init)
+
+**What changed:**
+- `train_pytorch_waveonly.py` — new script. `WaveClassifier` = `WaveformCNN` + 2-layer head (Linear(64→64)→ReLU→Dropout(0.5)→Linear(64→1)). No spectrogram loading, no ViT. BCE+pos_weight, AdamW, ReduceLROnPlateau. Early stopped at epoch 26.
+- `test_waveonly.py` — 5 tests (output shape, single sample, sigmoid range, gradients, weight extractability). All pass.
+- Pretrained CNN weights saved: `outputs/pytorch_waveonly/best_seed1.pt`
+
+**Results vs baseline (full AudioFuse, seed=1):**
+
+| Metric | Wave-Only | Full AudioFuse | Δ |
+|--------|-----------|----------------|---|
+| Accuracy | 0.8731 | 0.9267 | -0.0536 |
+| F1 | 0.7078 | 0.8462 | -0.1384 |
+| ROC-AUC | 0.9331 | 0.9668 | -0.0337 |
+| MCC | 0.6288 | 0.7990 | -0.1702 |
+
+At optimal threshold (0.25): Acc=0.8293, F1=0.7112, MCC=0.6291
+
+**Key finding:** Wave-only AUC when trained *independently* (0.9331) is notably lower than wave-only AUC from branch ablation on the full model (0.9667). The full model's CNN is strengthened by joint training even though the ViT contributes little. This confirms the CNN is not the bottleneck — the joint training dynamics matter. Pretrained branch init should help the ViT catch up.
+
+**Next step:** Pre-train ViT branch independently (spectrogram-only classifier), then load both pretrained branch weights into AudioFuse for fine-tuning. CNN weights ready at `outputs/pytorch_waveonly/best_seed1.pt`.
+
+---
+
 ## 2026-07-05 (continued)
 
 ### [DONE] MFCC spectrogram input — seed=1 (Direction 1.2)
