@@ -4,6 +4,38 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-09
+
+### [DONE] Spectrogram-Only (ViT) Baseline — seed=1 (Direction 3.1 / pretrained branch init)
+
+**What changed:**
+- `train_pytorch_speconly.py` — new script. `SpecClassifier` = `SpectrogramViT` + 2-layer head (Linear(192→192)→ReLU→Dropout(0.5)→Linear(192→1)). Loads spectrogram only from PCGDataset (waveform ignored). BCE+pos_weight, AdamW, ReduceLROnPlateau. Early stopped at epoch 16.
+- `test_speconly.py` — 5 tests (output shape, single sample, sigmoid range, gradients, weight extractability). All pass.
+- Pretrained ViT weights saved: `outputs/pytorch_speconly/best_seed1.pt`
+
+**Results vs baseline (full AudioFuse, seed=1):**
+
+| Metric | Spec-Only (independent) | Spec-Only (joint ablation) | Full AudioFuse |
+|--------|------------------------|---------------------------|----------------|
+| ROC-AUC | 0.5948 | 0.4588 | 0.9668 |
+| Accuracy | 0.7701 | — | 0.9267 |
+| F1 (thresh=0.50) | 0.0000 | — | 0.8462 |
+| MCC | 0.0000 | — | 0.7990 |
+
+**Important notes:**
+- Best val AUC during training was **0.8448 at epoch 15** (acc=0.6291), but checkpoint was saved on best val *accuracy* (epoch 10, acc=0.7701, AUC=0.7807). This mismatch caused the final reported AUC to be 0.5948 — well below the peak.
+- F1=0.0 at threshold=0.5 means model predicts all-normal at that threshold (class imbalance). At optimal threshold (0.45): F1=0.4225, MCC=0.1864.
+- **Key finding:** Independent ViT AUC (0.5948, peak 0.8448) >> joint ablation AUC (0.4588). Confirms the ViT *can* learn from spectrograms when trained alone — joint training suppresses it.
+- **Bug identified:** Checkpoint saving on best val accuracy (not AUC) is wrong for imbalanced datasets. Fix: save on best val AUC in all future scripts including pretrained-branch-init.
+
+**Both pretrained branch weights are now ready:**
+- CNN: `outputs/pytorch_waveonly/best_seed1.pt`
+- ViT: `outputs/pytorch_speconly/best_seed1.pt` (note: saved at acc-optimal epoch, not AUC-optimal)
+
+**Next step:** Re-run spec-only with checkpoint saving on best val AUC, then implement pretrained-branch-init AudioFuse.
+
+---
+
 ## 2026-07-08
 
 ### [DONE] Waveform-Only Baseline — seed=1 (Direction 3.1 / pretrained branch init)

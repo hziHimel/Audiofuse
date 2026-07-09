@@ -44,7 +44,8 @@
 ### 1.3 Architecture Improvements
 
 - [x] Pre-train waveform CNN branch independently — `train_pytorch_waveonly.py`; wave-only AUC=0.9331 (vs 0.9667 from ablation on joint model); CNN weights saved at `outputs/pytorch_waveonly/best_seed1.pt` (2026-07-08)
-- [ ] Pre-train ViT branch independently (spectrogram-only classifier); save ViT weights separately
+- [x] Pre-train ViT branch independently (spectrogram-only classifier) — `train_pytorch_speconly.py`; peak val AUC=0.8448 (epoch 15) >> joint ablation AUC=0.4588; proves ViT can learn from spectrograms alone; ViT weights saved at `outputs/pytorch_speconly/best_seed1.pt` (2026-07-09)
+- [ ] Re-run spec-only with checkpoint saving on best val AUC instead of accuracy (current checkpoint is suboptimal due to class imbalance — saved at acc-optimal epoch, not AUC-optimal)
 - [ ] Initialize AudioFuse fusion model with pretrained branch weights, then fine-tune end-to-end — tests whether independent pretraining prevents waveform branch from dominating and forces ViT to contribute
 - [ ] Compare branch ablation AUC (spec-only, wave-only) before vs after pretrained init to verify both branches are activated
 
@@ -135,6 +136,13 @@
 - [ ] Aggregate SHAP values by branch to produce a scalar branch importance score per sample
 - [ ] Extract ViT attention weights from each transformer block and visualize attended patches
 - [ ] Check whether abnormal-class attention concentrates on 100–500 Hz frequency bands in spectrogram
+
+### 3.1.5 Branch Complementarity Analysis
+
+- [ ] Error disagreement analysis: for each val sample classify into (wave✓/spec✓), (wave✓/spec✗), (wave✗/spec✓), (wave✗/spec✗) using wave-only and spec-only val predictions; report off-diagonal counts as evidence of complementarity
+- [ ] CKA (Centered Kernel Alignment): collect f_spec (192-dim) and f_wave (64-dim) on val set from the full AudioFuse model; compute linear CKA score (0=dissimilar, 1=identical); low CKA = branches encode different information
+- [ ] Repeat CKA before vs after pretrained-branch-init to see if joint fine-tuning collapses representations toward redundancy
+- [ ] (Optional) Grad-CAM on ViT branch to visualize attended spectrogram patches; compare with CNN saliency on waveform to show qualitatively different focus regions
 
 ### 3.2 Fusion Timing Ablation
 
