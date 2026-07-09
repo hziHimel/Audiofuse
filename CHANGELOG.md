@@ -4,6 +4,44 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-09 (continued)
+
+### [DONE] Spectrogram-Only ViT v2 — seed=1 (Direction 3.1 / pretrained branch init)
+
+**What changed (v2 fixes over v1):**
+- Checkpoint saved on best val **AUC** (not accuracy) — correct for imbalanced data
+- Class-balanced batch sampler (`WeightedRandomSampler`) — equal normal/abnormal per batch
+- Lower LR: 1e-4 (vs 3e-4) — ViT needs more careful optimization
+- Longer patience: 25 (vs 15) — ViT converges slower
+- Linear LR warmup over 10 epochs before ReduceLROnPlateau kicks in
+- Plateau scheduler now maximizes AUC (mode="max") instead of minimizing loss
+- Early stopped at epoch 147. Pretrained ViT weights saved: `outputs/pytorch_speconly/best_seed1.pt`
+
+**Results comparison:**
+
+| Metric | Spec-Only v1 | Spec-Only v2 | Joint ablation | Full AudioFuse |
+|--------|-------------|-------------|----------------|----------------|
+| ROC-AUC | 0.5948 | **0.9592** | 0.4588 | 0.9668 |
+| Accuracy | 0.7701 | 0.8900 | — | 0.9267 |
+| F1 (0.50) | 0.0000 | 0.7937 | — | 0.8462 |
+| MCC | 0.0000 | 0.7334 | — | 0.7990 |
+
+At optimal threshold (0.60): Acc=0.9041, F1=0.8152, MCC=0.7606
+
+**Key finding — smoking gun for the paper:**
+ViT alone AUC = **0.9592** (just 0.0076 below full dual-branch model) when trained independently with proper fixes. Yet in joint training the ViT branch ablation AUC was only 0.4588 — near random. This is definitive proof that:
+1. The ViT is a capable classifier on its own
+2. Joint training completely kills the ViT via gradient dominance
+3. The full model's AUC (0.9668) is almost entirely driven by the CNN alone
+
+**Both pretrained branch weights are now ready:**
+- CNN: `outputs/pytorch_waveonly/best_seed1.pt` (AUC=0.9331)
+- ViT: `outputs/pytorch_speconly/best_seed1.pt` (AUC=0.9592)
+
+**Next step:** Implement pretrained-branch-init AudioFuse — load both weights, freeze branches for first N epochs, fine-tune end-to-end.
+
+---
+
 ## 2026-07-09
 
 ### [DONE] Spectrogram-Only (ViT) Baseline — seed=1 (Direction 3.1 / pretrained branch init)

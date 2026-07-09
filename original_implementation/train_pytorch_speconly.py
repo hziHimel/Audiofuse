@@ -6,8 +6,12 @@ Two purposes:
   1. Clean single-branch ablation number for the paper.
   2. Saves pretrained ViT weights for use in pretrained-branch-init experiment.
 
-Saved checkpoint (best_seed{N}.pt) contains only SpectrogramViT + head weights
-and can be loaded into AudioFuse.spec_branch for pretrained init.
+Improvements over v1:
+  - Checkpoint saved on best val AUC (not accuracy) — correct for imbalanced data
+  - Class-balanced batch sampler — guarantees equal normal/abnormal per batch
+  - Lower LR (1e-4 vs 3e-4) — ViT needs more careful optimization than CNN
+  - Longer patience (25 vs 15) — ViT converges slower, needs more epochs
+  - Linear LR warmup (10 epochs) before ReduceLROnPlateau kicks in
 
 Usage:
     python train_pytorch_speconly.py --train_csv data/train.csv \
@@ -22,7 +26,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -32,6 +36,10 @@ from tqdm import tqdm
 from train_pytorch import Config, SpectrogramViT, PCGDataset, sweep_threshold, DEVICE
 
 C = Config()
+
+VIT_LR      = 1e-4   # lower than default 3e-4 — ViT needs careful optimization
+VIT_PATIENCE = 25    # longer patience — ViT converges slower than CNN
+WARMUP_EPOCHS = 10   # linear LR warmup before scheduler kicks in
 
 
 class SpecClassifier(nn.Module):
@@ -50,7 +58,19 @@ class SpecClassifier(nn.Module):
         return self.head(self.spec_branch(spec)).squeeze(1)
 
 
-def run_epoch(model, loader, optimizer, pos_weight, train=True):
+def make_balanced_sampler(df: pd.DataFrame) -> WeightedRandomSampler:
+    """Balanced sampler so each batch has equal normal/abnormal samples."""
+    labels = df["label"].values
+    class_counts = np.bincount(labels)
+    weights = 1.0 / class_counts[labels]
+    return WeightedRandomSampler(
+        weights=torch.from_numpy(weights).float(),
+        num_samples=len(weights),
+        replacement=True,
+    )
+
+
+def run_epoch(model, loader, optimizer, pos_weight, epoch, train=True):
     model.train(train)
     total_loss, all_probs, all_labels = 0.0, [], []
 
@@ -80,48 +100,57 @@ def train_one_seed(args, seed: int):
     np.random.seed(seed)
 
     train_df = pd.read_csv(args.train_csv)
-    val_df = pd.read_csv(args.val_csv)
+    val_df   = pd.read_csv(args.val_csv)
 
-    train_loader = DataLoader(PCGDataset(train_df), batch_size=C.BATCH_SIZE, shuffle=True,
-                              num_workers=2, pin_memory=True)
-    val_loader = DataLoader(PCGDataset(val_df), batch_size=C.BATCH_SIZE, shuffle=False,
-                            num_workers=2, pin_memory=True)
+    sampler = make_balanced_sampler(train_df)
+    train_loader = DataLoader(PCGDataset(train_df), batch_size=C.BATCH_SIZE,
+                              sampler=sampler, num_workers=2, pin_memory=True)
+    val_loader   = DataLoader(PCGDataset(val_df), batch_size=C.BATCH_SIZE,
+                              shuffle=False, num_workers=2, pin_memory=True)
 
     n_neg = (train_df["label"] == 0).sum()
     n_pos = (train_df["label"] == 1).sum()
     pos_weight = torch.tensor([n_neg / n_pos], dtype=torch.float32).to(DEVICE)
-    print(f"pos_weight = {pos_weight.item():.4f}  [spectrogram-only ViT]")
+    print(f"pos_weight={pos_weight.item():.4f}  LR={VIT_LR}  patience={VIT_PATIENCE}  "
+          f"warmup={WARMUP_EPOCHS}  balanced_sampler=True  [spec-only ViT v2]")
 
     model = SpecClassifier().to(DEVICE)
-    optimizer = AdamW(model.parameters(), lr=C.LR, weight_decay=C.WEIGHT_DECAY)
-    scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=10, min_lr=1e-6)
+    optimizer = AdamW(model.parameters(), lr=VIT_LR, weight_decay=C.WEIGHT_DECAY)
+    plateau_scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5,
+                                          patience=10, min_lr=1e-6)
 
     os.makedirs(args.output_dir, exist_ok=True)
     best_ckpt = os.path.join(args.output_dir, f"best_seed{seed}.pt")
-    best_val_acc = 0.0
+    best_val_auc = 0.0
     epochs_no_improve = 0
 
-    if os.path.exists(best_ckpt):
-        model.load_state_dict(torch.load(best_ckpt, map_location=DEVICE))
-        print(f"Resumed from checkpoint: {best_ckpt}")
-
     for epoch in range(1, C.EPOCHS + 1):
-        tr_loss, tr_acc, tr_auc = run_epoch(model, train_loader, optimizer, pos_weight, train=True)
-        vl_loss, vl_acc, vl_auc = run_epoch(model, val_loader, optimizer, pos_weight, train=False)
-        scheduler.step(vl_loss)
+        # linear warmup
+        if epoch <= WARMUP_EPOCHS:
+            for pg in optimizer.param_groups:
+                pg["lr"] = VIT_LR * epoch / WARMUP_EPOCHS
 
-        print(f"Epoch {epoch:3d} | "
+        tr_loss, tr_acc, tr_auc = run_epoch(model, train_loader, optimizer,
+                                             pos_weight, epoch, train=True)
+        vl_loss, vl_acc, vl_auc = run_epoch(model, val_loader, optimizer,
+                                             pos_weight, epoch, train=False)
+
+        if epoch > WARMUP_EPOCHS:
+            plateau_scheduler.step(vl_auc)
+
+        cur_lr = optimizer.param_groups[0]["lr"]
+        print(f"Epoch {epoch:3d} | lr={cur_lr:.2e} | "
               f"train loss={tr_loss:.4f} acc={tr_acc:.4f} auc={tr_auc:.4f} | "
               f"val loss={vl_loss:.4f} acc={vl_acc:.4f} auc={vl_auc:.4f}")
 
-        if vl_acc > best_val_acc:
-            best_val_acc = vl_acc
+        if vl_auc > best_val_auc:
+            best_val_auc = vl_auc
             torch.save(model.state_dict(), best_ckpt)
             epochs_no_improve = 0
         else:
             epochs_no_improve += 1
-            if epochs_no_improve >= C.PATIENCE:
-                print(f"Early stopping at epoch {epoch}")
+            if epochs_no_improve >= VIT_PATIENCE:
+                print(f"Early stopping at epoch {epoch}  (best val AUC={best_val_auc:.4f})")
                 break
 
     model.load_state_dict(torch.load(best_ckpt, map_location=DEVICE))
@@ -151,7 +180,7 @@ def train_one_seed(args, seed: int):
     opt_mcc = matthews_corrcoef(y_true, y_pred_opt)
 
     print(f"\n{'='*50}")
-    print(f"Seed {seed} Results [SPEC-ONLY ViT] (threshold=0.50):")
+    print(f"Seed {seed} Results [SPEC-ONLY ViT v2] (threshold=0.50):")
     print(f"  Accuracy : {acc:.4f}")
     print(f"  F1-Score : {f1:.4f}")
     print(f"  ROC-AUC  : {auc:.4f}")
@@ -185,7 +214,7 @@ def main():
 
     all_results = []
     for seed in args.seeds:
-        print(f"\n{'#'*60}\n# Training with seed={seed} [SPEC-ONLY ViT]\n{'#'*60}")
+        print(f"\n{'#'*60}\n# Training with seed={seed} [SPEC-ONLY ViT v2]\n{'#'*60}")
         all_results.append(train_one_seed(args, seed))
 
     results_df = pd.DataFrame(all_results)
