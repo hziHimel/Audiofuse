@@ -27,7 +27,22 @@ At optimal threshold (0.35): Acc=0.9252, F1=0.8464, MCC=0.7993 — F1 and MCC be
 
 **Key result:** AUC improved (+0.0009) confirming pretrained init helps. Marginal gain on AUC expected since baseline CNN already dominated; true benefit measured via branch ablation (next step).
 
-**Next step:** Run branch ablation on pretrained-init model to confirm ViT now contributes meaningfully (spec-only AUC should be >> 0.4588 from random-init joint model).
+**Branch ablation on pretrained-init model (vs random-init model):**
+
+| Condition | Random-Init | Pretrained-Init | Δ |
+|-----------|------------|-----------------|---|
+| Full AUC | 0.9668 | 0.9677 | +0.0009 |
+| Wave-only AUC | 0.9667 | 0.8017 | -0.1650 |
+| Spec-only AUC | 0.4588 | **0.9621** | **+0.5033** |
+| Spec-dominant (normal) | 0.4% | **21.1%** | +20.7pp |
+| Spec-dominant (abnormal) | 3.7% | **96.3%** | +92.6pp |
+
+**This is the key result of the paper.** Pretrained-init completely transforms branch utilization:
+- ViT now dominates 96.3% of abnormal sample decisions (was 3.7%)
+- Spec-only AUC jumps from 0.4588 (near random) to 0.9621
+- Wave-only AUC drops from 0.9667 to 0.8017 — CNN no longer carries everything alone
+- Both branches are now genuinely complementary: ViT identifies abnormal sounds, CNN handles normal sounds
+- Full model AUC still improves (+0.0009) confirming the fusion of two strong branches beats one dominant branch
 
 ---
 
