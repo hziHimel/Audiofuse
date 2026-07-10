@@ -129,6 +129,12 @@
 - [x] For each val sample, run 3 forward passes: full model, spec-zeroed, wave-zeroed — `branch_ablation.py` (2026-07-04)
 - [x] Compute per-sample branch dominance (which branch drives the correct prediction) — wave-dominant: 99.6% normal, 96.3% abnormal (2026-07-04)
 - [x] Aggregate branch dominance stats across val set by class — wave-only AUC=0.9667 ≈ full model; spec-only AUC=0.4588 (worse than random); ViT branch contributes almost nothing (2026-07-04)
+- [ ] Gradient flow visualization on random-init joint training: log per-branch gradient norms (‖∇L/∇θ_spec‖ and ‖∇L/∇θ_wave‖) at every epoch; plot gradient norm curves over training to visually demonstrate CNN dominates early and ViT receives vanishing gradients — direct empirical proof of gradient dominance as the root cause
+- [ ] Explainability — why does ViT specialize in abnormal and CNN in normal after pretrained init?
+    - GradCAM on ViT branch: visualize attended spectrogram patches for normal vs abnormal samples — expect ViT to focus on murmur frequency bands (100–500 Hz) and irregular S1/S2 timing in abnormal cases
+    - Waveform saliency on CNN branch: compute input gradients w.r.t. waveform for normal vs abnormal — expect CNN to focus on regular heartbeat envelope/rhythm in normal cases
+    - Compare attention maps pre vs post pretrained-init to show the ViT learned meaningful frequency features only after proper training
+    - This adds an explainability/interpretability dimension to the paper — answers the "why" behind branch specialization
 - [ ] Implement Integrated Gradients on each branch output and compute per-branch attribution scores
 - [ ] Visualize GradCAM attribution maps for normal vs abnormal samples from the ViT branch
 - [ ] Run SHAP on the fusion head treating [f_spec (192-dim); f_wave (64-dim)] as input features
