@@ -48,6 +48,17 @@
 - [x] Initialize AudioFuse fusion model with pretrained branch weights, then fine-tune end-to-end — `train_pytorch_pretrained_init.py`; AUC=0.9677 vs 0.9668 baseline (+0.0009); F1/MCC beat baseline at optimal threshold (2026-07-11)
 - [x] Run branch ablation on pretrained-init model — spec-only AUC 0.4588→0.9621; ViT now dominates 96.3% of abnormal decisions (was 3.7%); both branches genuinely complementary (2026-07-11)
 
+#### Gradient Dominance — Comparative Study of Remedies (new — 2026-07-11)
+
+Goal: turn the paper from "we found a fix" into "we systematically studied the problem and evaluated multiple remedies." Produce a comparison table: method vs full AUC, spec-only AUC, wave-only AUC, ViT-dominance %, training cost. Pretrained-init is one of several remedies.
+
+- [x] **Gradient-flow instrumentation** — `grad_flow.py` + `train_pytorch_gradflow.py`; wave/spec grad-norm ratio climbs 3.03x (ep1) → 85.29x (final), mean 50.40x; ViT grad norm collapses 0.374→0.022; `grad_flow.png` centerpiece figure. 6 tests pass. Reusable for remedy comparison. (2026-07-11)
+- [ ] **OGM-GE (On-the-fly Gradient Modulation, Peng et al. CVPR 2022)**: monitor each branch's contribution ratio during training, dynamically scale down the dominant branch's gradients so the weaker branch catches up. Most-cited direct solution — the baseline reviewers will expect. Compare vs pretrained-init.
+- [ ] **Modality dropout**: randomly zero out one branch per batch during training, forcing each branch to be independently useful. Simple, directly attacks the dominance mechanism.
+- [ ] **Decoupled/separate learning rates**: give ViT a much higher LR than CNN in joint training from scratch — tests whether the problem is purely convergence *speed*.
+- [ ] **Gradient magnitude balancing**: normalize/rescale per-branch gradients to equal magnitude each step (cheaper than OGM-GE). Optional ablation point.
+- [ ] Produce final comparison table across all remedies + random-init baseline; report which best activates the ViT (highest spec-only AUC) at what training cost.
+
 - [x] Replace Global Average Pooling in ViT branch with attention pooling (Linear(192,1) + softmax over patches) — `SpectrogramViTAttn` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Measure attention pooling effect on AUC vs GAP baseline (same seed) — AUC 0.9304 vs 0.9668 baseline; below baseline, likely due to entropy reg constraining model (2026-06-29)
 - [x] Implement deeper waveform CNN with residual (skip) connections between the 3 blocks — `train_pytorch_rescnn.py`; 5 tests pass (2026-07-04)

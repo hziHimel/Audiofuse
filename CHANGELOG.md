@@ -4,6 +4,29 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-11 (continued)
+
+### [DONE] Gradient-Flow Instrumentation — proof of gradient dominance (Direction 3.1)
+
+**What changed:**
+- `grad_flow.py` — utility computing per-branch gradient L2 norms after backward(). `branch_grad_norm()` and `branch_grad_norms()` (returns spec norm, wave norm, wave/spec ratio).
+- `test_grad_flow.py` — 6 tests (zero before backward, positive after, frozen branch = 0, ratio math, inf when spec=0). All pass.
+- `train_pytorch_gradflow.py` — trains standard random-init AudioFuse while logging per-step gradient norms. Outputs `grad_flow.csv` (per-step), `grad_flow_epoch.csv` (per-epoch means + val AUC), `grad_flow.png` (log-scale plot). Early stopped at epoch 77.
+
+**Results — empirical proof of gradient dominance:**
+
+| Point | Wave grad norm | Spec grad norm | Ratio (wave/spec) |
+|-------|---------------|----------------|-------------------|
+| Epoch 1 | 1.0697 | 0.3742 | 3.03× |
+| Epoch 22 | 2.23 | 0.113 | 30× |
+| Epoch 38 | 3.22 | 0.080 | 73× |
+| Final epoch | 2.0577 | 0.0223 | 85.29× |
+| **Mean (all epochs)** | — | — | **50.40×** |
+
+**Conclusion:** The waveform CNN receives 3× larger gradients than the ViT from epoch 1, widening to 85× by convergence. The ViT gradient norm collapses from 0.374 → 0.022 while the CNN stays strong (~2.0). This is direct mechanism-level proof of gradient dominance — the root cause of the near-random spec-only ablation AUC (0.4588) in the random-init joint model. The `grad_flow.png` log-scale plot (persistent 1.5–2 order-of-magnitude gap) is a centerpiece figure for the paper. This same instrumentation will be reused to show how each remedy (OGM-GE, modality dropout) rebalances the gradients.
+
+---
+
 ## 2026-07-11
 
 ### [DONE] Pretrained Branch Initialization — seed=1 (Direction 1.3)
