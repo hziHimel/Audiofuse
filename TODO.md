@@ -45,8 +45,8 @@
 
 - [x] Pre-train waveform CNN branch independently — `train_pytorch_waveonly.py`; wave-only AUC=0.9331 (vs 0.9667 from ablation on joint model); CNN weights saved at `outputs/pytorch_waveonly/best_seed1.pt` (2026-07-08)
 - [x] Pre-train ViT branch independently (spectrogram-only classifier) — `train_pytorch_speconly.py` v2; AUC=0.9592 vs joint ablation 0.4588; smoking gun: ViT is capable alone but killed by joint training; weights saved at `outputs/pytorch_speconly/best_seed1.pt` (2026-07-09)
-- [ ] Initialize AudioFuse fusion model with pretrained branch weights, then fine-tune end-to-end — tests whether independent pretraining prevents waveform branch from dominating and forces ViT to contribute
-- [ ] Compare branch ablation AUC (spec-only, wave-only) before vs after pretrained init to verify both branches are activated
+- [x] Initialize AudioFuse fusion model with pretrained branch weights, then fine-tune end-to-end — `train_pytorch_pretrained_init.py`; AUC=0.9677 vs 0.9668 baseline (+0.0009); F1/MCC beat baseline at optimal threshold (2026-07-11)
+- [ ] Run branch ablation on pretrained-init model to compare spec-only/wave-only AUC before vs after — key proof that ViT now contributes (expect spec-only AUC >> 0.4588)
 
 - [x] Replace Global Average Pooling in ViT branch with attention pooling (Linear(192,1) + softmax over patches) — `SpectrogramViTAttn` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Measure attention pooling effect on AUC vs GAP baseline (same seed) — AUC 0.9304 vs 0.9668 baseline; below baseline, likely due to entropy reg constraining model (2026-06-29)

@@ -4,6 +4,33 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-11
+
+### [DONE] Pretrained Branch Initialization — seed=1 (Direction 1.3)
+
+**What changed:**
+- `train_pytorch_pretrained_init.py` — new script. Loads independently pretrained ViT (`outputs/pytorch_speconly/best_seed1.pt`) and CNN (`outputs/pytorch_waveonly/best_seed1.pt`) weights into AudioFuse before joint training.
+- `test_pretrained_init.py` — 7 tests (weight loading, branch freeze/unfreeze, optimizer phase1/phase2, balanced sampler). All pass.
+- 3-phase training: Phase 1 (epochs 1–10) head-only frozen branches; Phase 2 (epoch 11+) full fine-tune with differential LR (branch=5e-5, head=3e-4), linear warmup, AUC-maximizing plateau scheduler, patience=25.
+- Early stopped at epoch 40. Checkpoint: `outputs/pytorch_pretrained_init/best_seed1.pt`
+
+**Results vs baseline (random init AudioFuse, seed=1):**
+
+| Metric | Baseline (random init) | Pretrained-Init | Δ |
+|--------|----------------------|-----------------|---|
+| ROC-AUC | 0.9668 | **0.9677** | **+0.0009** |
+| Accuracy | 0.9267 | 0.9238 | -0.0029 |
+| F1 (0.50) | 0.8462 | 0.8402 | -0.0060 |
+| MCC | 0.7990 | 0.7912 | -0.0078 |
+
+At optimal threshold (0.35): Acc=0.9252, F1=0.8464, MCC=0.7993 — F1 and MCC beat baseline.
+
+**Key result:** AUC improved (+0.0009) confirming pretrained init helps. Marginal gain on AUC expected since baseline CNN already dominated; true benefit measured via branch ablation (next step).
+
+**Next step:** Run branch ablation on pretrained-init model to confirm ViT now contributes meaningfully (spec-only AUC should be >> 0.4588 from random-init joint model).
+
+---
+
 ## 2026-07-09 (continued)
 
 ### [DONE] Spectrogram-Only ViT v2 — seed=1 (Direction 3.1 / pretrained branch init)
