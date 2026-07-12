@@ -44,6 +44,7 @@ from tqdm import tqdm
 from train_pytorch import Config, AudioFuse, PCGDataset, sweep_threshold, DEVICE
 from train_pytorch_speconly import SpecClassifier
 from train_pytorch_waveonly import WaveClassifier
+from grad_flow import branch_grad_norm
 
 C = Config()
 
@@ -100,7 +101,7 @@ def make_optimizer(model: AudioFuse, phase2: bool = False):
     ], weight_decay=C.WEIGHT_DECAY)
 
 
-def run_epoch(model, loader, optimizer, pos_weight, train=True):
+def run_epoch(model, loader, optimizer, pos_weight, train=True, grad_rec=None, epoch=0):
     model.train(train)
     total_loss, all_probs, all_labels = 0.0, [], []
 
@@ -113,6 +114,12 @@ def run_epoch(model, loader, optimizer, pos_weight, train=True):
             if train:
                 optimizer.zero_grad()
                 loss.backward()
+                if grad_rec is not None:  # log per-branch grad norms before step
+                    grad_rec.append({
+                        "epoch": epoch,
+                        "grad_norm_spec": branch_grad_norm(model.spec_branch),
+                        "grad_norm_wave": branch_grad_norm(model.wave_branch),
+                    })
                 optimizer.step()
 
             total_loss += loss.item() * len(labels)
@@ -157,6 +164,7 @@ def train_one_seed(args, seed: int):
     set_branches_frozen(model, frozen=True)
     optimizer = make_optimizer(model, phase2=False)
     scheduler = None
+    grad_rec, epoch_records = [], []
 
     for epoch in range(1, C.EPOCHS + 1):
         # Switch to phase 2 after FREEZE_EPOCHS
@@ -174,18 +182,31 @@ def train_one_seed(args, seed: int):
                 pg["lr"] = pg["lr"] * warmup_factor
 
         tr_loss, tr_acc, tr_auc = run_epoch(model, train_loader, optimizer,
-                                             pos_weight, train=True)
+                                             pos_weight, train=True,
+                                             grad_rec=grad_rec, epoch=epoch)
         vl_loss, vl_acc, vl_auc = run_epoch(model, val_loader, optimizer,
                                              pos_weight, train=False)
 
         if scheduler is not None and epoch > FREEZE_EPOCHS + WARMUP_EPOCHS:
             scheduler.step(vl_auc)
 
+        # per-epoch mean gradient norms (spec branch frozen in Phase 1 → norm 0)
+        ep = [r for r in grad_rec if r["epoch"] == epoch]
+        mean_spec = np.mean([r["grad_norm_spec"] for r in ep]) if ep else 0.0
+        mean_wave = np.mean([r["grad_norm_wave"] for r in ep]) if ep else 0.0
+        ratio = mean_wave / (mean_spec + 1e-12)
+        epoch_records.append({
+            "epoch": epoch, "val_auc": vl_auc, "val_acc": vl_acc,
+            "grad_norm_spec": mean_spec, "grad_norm_wave": mean_wave,
+            "grad_ratio_wave_over_spec": ratio,
+        })
+
         phase = "P1-frozen" if epoch <= FREEZE_EPOCHS else "P2-finetune"
         cur_lr = optimizer.param_groups[0]["lr"]
         print(f"Epoch {epoch:3d} [{phase}] | lr={cur_lr:.2e} | "
               f"train loss={tr_loss:.4f} acc={tr_acc:.4f} auc={tr_auc:.4f} | "
-              f"val loss={vl_loss:.4f} acc={vl_acc:.4f} auc={vl_auc:.4f}")
+              f"val loss={vl_loss:.4f} acc={vl_acc:.4f} auc={vl_auc:.4f} | "
+              f"grad ratio(w/s)={ratio:.2f}")
 
         if vl_auc > best_val_auc:
             best_val_auc = vl_auc
@@ -197,6 +218,9 @@ def train_one_seed(args, seed: int):
                 if epochs_no_improve >= PATIENCE:
                     print(f"Early stopping at epoch {epoch}  (best val AUC={best_val_auc:.4f})")
                     break
+
+    pd.DataFrame(epoch_records).to_csv(
+        os.path.join(args.output_dir, f"gradflow_epoch_seed{seed}.csv"), index=False)
 
     model.load_state_dict(torch.load(best_ckpt, map_location=DEVICE))
     model.eval()
