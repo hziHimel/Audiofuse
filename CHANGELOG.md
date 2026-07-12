@@ -4,6 +4,34 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-12
+
+### [DONE] OGM-GE Remedy — seed=1 (Direction 3.1, gradient-dominance comparative study)
+
+**What changed:**
+- `ogm.py` — OGM-GE modulation logic. `true_class_confidence()` and `modulation_coeffs()` (damps dominant branch by k=1-tanh(α·relu(ratio-1))). Adapted from Peng et al. CVPR 2022; per-branch contribution estimated via zeroed-branch forward passes (our non-linear fusion head can't be linearly decomposed like the original).
+- `test_ogm.py` — 9 tests (confidence math, damping direction, monotonicity, bounds, α=0 disables). All pass.
+- `train_pytorch_ogm.py` — trains random-init AudioFuse + OGM-GE. Protocol matches the baseline exactly (shuffle, pos_weight, LR=3e-4, plateau-on-loss, checkpoint-on-val-acc, patience=15) so it's a clean A/B — the only difference is modulation. Logs per-branch grad norms pre/post modulation. Early stopped ~epoch 76. α=0.5, ge_sigma=0.
+- `outputs/pytorch_ogm/ogm_epoch.csv` — per-epoch pre/post gradient ratios + k coefficients.
+
+**Modulation working live:** each step damps the wave branch (k_wave~0.4–0.5) roughly halving the ratio (e.g. ep2 pre=8.80→post=4.48; ep38 pre=23.1→post=11.1). Also prevented runaway dominance — raw ratio held to ~14–23× vs the uncorrected baseline's 72–85×.
+
+**Final results + branch ablation — the comparative study:**
+
+| Metric | Random-init | OGM-GE | Pretrained-init |
+|--------|-------------|--------|-----------------|
+| Full AUC | 0.9668 | 0.9674 | 0.9677 |
+| Wave-only AUC | 0.9667 | 0.9649 | 0.8017 |
+| **Spec-only AUC** | 0.4588 | **0.6155** | 0.9621 |
+| ViT-dominant (abnormal) | 3.7% | 33.1% | 96.3% |
+| ViT-dominant (normal) | 0.4% | 6.2% | 21.1% |
+
+OGM-GE optimal-threshold (0.65): Acc=0.9295, F1=0.8457, MCC=0.8000.
+
+**Conclusion — clean graded ordering of remedies:** random-init (ViT dead) < OGM-GE (ViT partially activated, spec-only 0.4588→0.6155) < pretrained-init (ViT fully activated, spec-only 0.9621). The established SOTA method (OGM-GE) helps but only partially closes the gap; our pretrained-init is decisively the strongest remedy on branch activation. Full AUC is near-identical across all three (~0.967) — the differentiator is *branch utilization*, not raw AUC. This is the core comparative result for the paper.
+
+---
+
 ## 2026-07-11 (continued)
 
 ### [DONE] Gradient-Flow Instrumentation — proof of gradient dominance (Direction 3.1)

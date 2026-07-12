@@ -53,7 +53,7 @@
 Goal: turn the paper from "we found a fix" into "we systematically studied the problem and evaluated multiple remedies." Produce a comparison table: method vs full AUC, spec-only AUC, wave-only AUC, ViT-dominance %, training cost. Pretrained-init is one of several remedies.
 
 - [x] **Gradient-flow instrumentation** — `grad_flow.py` + `train_pytorch_gradflow.py`; wave/spec grad-norm ratio climbs 3.03x (ep1) → 85.29x (final), mean 50.40x; ViT grad norm collapses 0.374→0.022; `grad_flow.png` centerpiece figure. 6 tests pass. Reusable for remedy comparison. (2026-07-11)
-- [ ] **OGM-GE (On-the-fly Gradient Modulation, Peng et al. CVPR 2022)**: monitor each branch's contribution ratio during training, dynamically scale down the dominant branch's gradients so the weaker branch catches up. Most-cited direct solution — the baseline reviewers will expect. Compare vs pretrained-init.
+- [x] **OGM-GE (On-the-fly Gradient Modulation, Peng et al. CVPR 2022)** — `ogm.py` + `train_pytorch_ogm.py`; 9 tests pass. AUC=0.9674; spec-only ablation 0.4588→0.6155 (partial ViT activation); ViT-dominant abnormal 3.7%→33.1%. Partial fix — weaker than pretrained-init (0.9621 / 96.3%). Clean graded ordering established. (2026-07-12)
 - [ ] **Modality dropout**: randomly zero out one branch per batch during training, forcing each branch to be independently useful. Simple, directly attacks the dominance mechanism.
 - [ ] **Decoupled/separate learning rates**: give ViT a much higher LR than CNN in joint training from scratch — tests whether the problem is purely convergence *speed*.
 - [ ] **Gradient magnitude balancing**: normalize/rescale per-branch gradients to equal magnitude each step (cheaper than OGM-GE). Optional ablation point.
