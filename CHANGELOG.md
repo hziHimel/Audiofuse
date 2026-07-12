@@ -4,6 +4,29 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-13 — Multi-seed Step 2: seed 2 complete (PROVISIONAL — leaky split)
+
+NOTE: on the LEAKY split (see data-leakage-issue). Numbers provisional, used only
+to test seed-stability of the gradient-dominance hypothesis. Pretrained-init now
+also logs per-branch gradient flow (ratio ~0.2 confirmed on seed 2 vs baseline 85x).
+
+**Spec-only ablation AUC (is the ViT alive?) — seed 1 vs seed 2:**
+
+| Remedy | seed1 | seed2 | stable? |
+|--------|-------|-------|---------|
+| Baseline | 0.4588 | 0.4028 | ViT dead — YES |
+| Pretrained-init | 0.9621 | 0.9463 | ViT alive — YES |
+| OGM-GE | 0.6155 | 0.4842 | partial — YES |
+| Modality dropout | 0.5933 | 0.9043 | UNSTABLE |
+
+**Full-model AUC seed2:** baseline 0.9669, pretrained 0.9719, OGM 0.9335, moddrop 0.9691.
+
+Core story is seed-stable: baseline ViT dead + pretrained-init revives it, on both
+seeds. OGM-GE unstable (full AUC 0.967→0.933). Modality dropout erratic (ViT dead
+s1, alive s2) — confirms it's an unreliable remedy. Seeds 3–5 pending (next day).
+
+---
+
 ## 2026-07-12 (continued)
 
 ### [DONE] Modality Dropout Remedy — seed=1 (Direction 3.1, gradient-dominance comparative study)
