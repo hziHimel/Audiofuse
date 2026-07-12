@@ -97,6 +97,22 @@ one lucky initialization. Runs are sequential on the single MPS GPU (~2.5h/seed 
 - [ ] (optional) paired significance test (DeLong on AUC, or bootstrap) between pretrained-init and baseline / OGM-GE
 - [ ] Replace all seed=1 numbers in the draft abstract + CHANGELOG comparison table with mean ± std
 
+**Step 2.5 — REBUILD CLEAN SPLIT (blocker for final numbers; found 2026-07-13)**
+
+Data leakage confirmed: current `data/train.csv`+`data/val.csv` pool the PhysioNet
+`training-a…f` folders PLUS the official `validation/` folder, which duplicates
+recordings already in training. 85 recordings overlap train↔val (~12% of val),
+identical `.npy` files; plus duplicate rows within train. Inflates all absolute
+metrics (partly explains AUC 0.9668 vs paper 0.8608). Current 5-seed runs are being
+finished ONLY to confirm the gradient-dominance hypothesis is seed-stable — those
+numbers are PROVISIONAL and must not appear in the final paper.
+
+- [ ] Build a deduplicated split: one row per unique recording (dedupe by recording ID / npy), drop the `validation/`-folder duplicates
+- [ ] Make the split recording-disjoint and class-stratified (ideally patient-disjoint if patient mapping is recoverable per PhysioNet subset)
+- [ ] Sanity-check the new split: zero filename/npy overlap between train and val, class ratio preserved
+- [ ] Re-run the full multi-seed pipeline (Step 2) on the clean split → these become the real publishable numbers
+- [ ] Compare clean-split baseline AUC vs the leaky 0.9668 to quantify how much was leakage
+
 **Step 3 — explainability / the "why" (the closing section; rests on Step 2 being stable)**
 
 Minimal 2-figure plan (supporting evidence, not core contribution). Build one at a
