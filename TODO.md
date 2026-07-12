@@ -97,10 +97,19 @@ one lucky initialization. Runs are sequential on the single MPS GPU (~2.5h/seed 
 - [ ] Replace all seed=1 numbers in the draft abstract + CHANGELOG comparison table with mean ± std
 
 **Step 3 — explainability / the "why" (the closing section; rests on Step 2 being stable)**
-- [ ] GradCAM (or attention rollout) on the ViT branch: visualize attended spectrogram patches for normal vs abnormal; test whether abnormal attention concentrates on murmur bands (~100–500 Hz) and irregular S1/S2 timing — gives a clinical reason the ViT specializes in abnormal detection
-- [ ] Waveform input-gradient saliency on the CNN branch for normal vs abnormal; test whether it locks onto regular S1–S2 rhythm/envelope — explains why the CNN "owns" the normal class
-- [ ] Compare ViT attention pre vs post pretrained-init to show meaningful frequency features emerge only after the branch is properly activated
-- [ ] Assemble the explainability figure panel + write the "what each branch does and why" section, linking branch specialization to cardiac-acoustic domain knowledge
+
+Minimal 2-figure plan (supporting evidence, not core contribution). Build one at a
+time, judge whether each clearly tells the story, drop anything confusing. Both run
+on existing checkpoints — no retraining.
+
+- [ ] **Figure 1 (do first — highest impact, easiest to read): t-SNE of ViT features, baseline vs pretrained-init.** Extract ViT branch features (192-dim, pre-head) on the val set for both models; project to 2D with t-SNE, color by class. Expected story: baseline = one mixed/overlapping blob (ViT can't separate classes); pretrained-init = two clean clusters (ViT now discriminates). Visually proves the central claim with zero domain expertise required.
+- [ ] **Figure 2: spectrogram attention heatmap on the ViT (the clinical "where").** Attention rollout (or GradCAM) over spectrogram patches for representative normal vs abnormal samples; check whether abnormal attention concentrates on murmur bands (~100–500 Hz) / irregular S1–S2 timing. The clinical hook.
+- [ ] Assemble the 2-figure panel + write the "what each branch does and why" section, linking branch specialization to cardiac-acoustic domain knowledge.
+
+Optional add-ons (only if a reviewer asks or time permits — do NOT front-load):
+- [ ] Waveform input-gradient saliency / SmoothGrad on the CNN branch (does it lock onto regular S1–S2 rhythm/envelope in normal cases?)
+- [ ] SHAP on the fusion head treating [f_spec; f_wave] as features → game-theoretic per-branch importance
+- [ ] CKA between f_spec and f_wave → single-number complementarity measure (links to §3.1.5)
 
 - [x] Replace Global Average Pooling in ViT branch with attention pooling (Linear(192,1) + softmax over patches) — `SpectrogramViTAttn` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Measure attention pooling effect on AUC vs GAP baseline (same seed) — AUC 0.9304 vs 0.9668 baseline; below baseline, likely due to entropy reg constraining model (2026-06-29)
