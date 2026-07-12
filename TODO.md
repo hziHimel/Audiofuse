@@ -59,6 +59,24 @@ Goal: turn the paper from "we found a fix" into "we systematically studied the p
 - [ ] **Gradient magnitude balancing**: normalize/rescale per-branch gradients to equal magnitude each step (cheaper than OGM-GE). Optional ablation point.
 - [ ] Produce final comparison table across all remedies + random-init baseline; report which best activates the ViT (highest spec-only AUC) at what training cost.
 
+#### Publication Sequencing Plan (2026-07-12) — do in this order
+
+**Step 1 — finish the remedy comparison (in progress)**
+- [ ] Run branch ablation on the modality-dropout model (spec-only AUC, ViT-dominance %) to slot it into the comparison table
+- [ ] (optional, lower priority) decoupled-LR and gradient-magnitude-balancing remedies if time permits — otherwise the 3-remedy table (OGM-GE, modality-dropout, pretrained-init) vs baseline is already sufficient
+
+**Step 2 — statistical rigor (do BEFORE writing; this is the main gap to submission)**
+- [ ] Multi-seed (≥3 seeds, e.g. 1/2/3) for the key runs: random-init baseline, pretrained-init, OGM-GE, modality-dropout
+- [ ] Report mean ± std for full AUC, spec-only ablation AUC, and ViT-dominance % per remedy
+- [ ] Confirm the branch-specialization result (ViT→abnormal, CNN→normal) is stable across seeds, not a seed-1 artifact
+- [ ] (optional) paired significance test (e.g. DeLong on AUC, or bootstrap) between pretrained-init and baseline / OGM-GE
+
+**Step 3 — explainability / the "why" (the closing section; rests on Step 2 being stable)**
+- [ ] GradCAM (or attention rollout) on the ViT branch: visualize attended spectrogram patches for normal vs abnormal; test whether abnormal attention concentrates on murmur bands (~100–500 Hz) and irregular S1/S2 timing — gives a clinical reason the ViT specializes in abnormal detection
+- [ ] Waveform input-gradient saliency on the CNN branch for normal vs abnormal; test whether it locks onto regular S1–S2 rhythm/envelope — explains why the CNN "owns" the normal class
+- [ ] Compare ViT attention pre vs post pretrained-init to show meaningful frequency features emerge only after the branch is properly activated
+- [ ] Assemble the explainability figure panel + write the "what each branch does and why" section, linking branch specialization to cardiac-acoustic domain knowledge
+
 - [x] Replace Global Average Pooling in ViT branch with attention pooling (Linear(192,1) + softmax over patches) — `SpectrogramViTAttn` in `train_pytorch_attn_gated.py` (2026-06-29)
 - [x] Measure attention pooling effect on AUC vs GAP baseline (same seed) — AUC 0.9304 vs 0.9668 baseline; below baseline, likely due to entropy reg constraining model (2026-06-29)
 - [x] Implement deeper waveform CNN with residual (skip) connections between the 3 blocks — `train_pytorch_rescnn.py`; 5 tests pass (2026-07-04)
