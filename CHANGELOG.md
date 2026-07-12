@@ -4,6 +4,30 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-12 (continued)
+
+### [DONE] Modality Dropout Remedy — seed=1 (Direction 3.1, gradient-dominance comparative study)
+
+**What changed:**
+- `modality_dropout.py` — `apply_modality_dropout(spec, wave, p)`: per-sample, with prob p one modality is zeroed (50/50 spec vs wave); never both. Forces fusion head to handle a missing modality, so both branches must be independently useful.
+- `test_modality_dropout.py` — 7 tests (p=0 identity, shapes, never-both-dropped, p=1 exactly-one, no in-place mutation, generator reproducibility, ~p fraction). All pass.
+- `train_pytorch_moddrop.py` — random-init AudioFuse + per-sample modality dropout (p=0.5) on train batches only; baseline protocol otherwise. Early stopped ~epoch 52.
+
+**Final results + branch ablation — completes the 4-way remedy comparison:**
+
+| Remedy | Full AUC | Spec-only AUC | ViT-dom (normal) | ViT-dom (abnormal) |
+|--------|----------|---------------|------------------|--------------------|
+| Random-init | 0.9668 | 0.4588 | 0.4% | 3.7% |
+| Modality dropout | 0.9667 | 0.5933 | 0.0% | 0.6% |
+| OGM-GE | 0.9674 | 0.6155 | 6.2% | 33.1% |
+| Pretrained-init | 0.9677 | 0.9621 | 21.1% | 96.3% |
+
+Modality dropout optimal-threshold (0.20): Acc=0.9196, F1=0.8403, MCC=0.7925.
+
+**Conclusion — modality dropout is effectively a FAILED activation remedy (a useful negative result).** During training we saw intermittent ViT-gradient bursts (one epoch hit ratio 0.57×, ViT grad 3.72) when wave-dropped samples clustered — but these did NOT translate to inference. The standalone ViT got marginally better (spec-only 0.4588→0.5933) yet the fusion model uses it *even less* than baseline (0.6% vs 3.7% abnormal dominance). This separates two distinct axes: **spec-only AUC = ViT standalone capability**, **dominance % = how much the fusion head actually uses the ViT**. Modality dropout (input-level) nudged capability but not utilization; OGM-GE (gradient-level) moved both moderately; only pretrained-init moves both decisively. Reinforces that the failure is gradient-level and best fixed by giving the ViT a strong starting point, not by input perturbation.
+
+---
+
 ## 2026-07-12
 
 ### [DONE] OGM-GE Remedy — seed=1 (Direction 3.1, gradient-dominance comparative study)

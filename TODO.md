@@ -54,7 +54,7 @@ Goal: turn the paper from "we found a fix" into "we systematically studied the p
 
 - [x] **Gradient-flow instrumentation** — `grad_flow.py` + `train_pytorch_gradflow.py`; wave/spec grad-norm ratio climbs 3.03x (ep1) → 85.29x (final), mean 50.40x; ViT grad norm collapses 0.374→0.022; `grad_flow.png` centerpiece figure. 6 tests pass. Reusable for remedy comparison. (2026-07-11)
 - [x] **OGM-GE (On-the-fly Gradient Modulation, Peng et al. CVPR 2022)** — `ogm.py` + `train_pytorch_ogm.py`; 9 tests pass. AUC=0.9674; spec-only ablation 0.4588→0.6155 (partial ViT activation); ViT-dominant abnormal 3.7%→33.1%. Partial fix — weaker than pretrained-init (0.9621 / 96.3%). Clean graded ordering established. (2026-07-12)
-- [ ] **Modality dropout**: randomly zero out one branch per batch during training, forcing each branch to be independently useful. Simple, directly attacks the dominance mechanism.
+- [x] **Modality dropout** — `modality_dropout.py` + `train_pytorch_moddrop.py`; 7 tests pass. AUC=0.9667; spec-only ablation 0.4588→0.5933 but ViT-dominance DROPS to 0.6% abnormal (was 3.7%). Effectively a FAILED activation remedy — input-level dropout nudges ViT capability but not fusion utilization. Useful negative result. (2026-07-12)
 - [ ] **Decoupled/separate learning rates**: give ViT a much higher LR than CNN in joint training from scratch — tests whether the problem is purely convergence *speed*.
 - [ ] **Gradient magnitude balancing**: normalize/rescale per-branch gradients to equal magnitude each step (cheaper than OGM-GE). Optional ablation point.
 - [ ] Produce final comparison table across all remedies + random-init baseline; report which best activates the ViT (highest spec-only AUC) at what training cost.
@@ -62,7 +62,7 @@ Goal: turn the paper from "we found a fix" into "we systematically studied the p
 #### Publication Sequencing Plan (2026-07-12) — do in this order
 
 **Step 1 — finish the remedy comparison (in progress)**
-- [ ] Run branch ablation on the modality-dropout model (spec-only AUC, ViT-dominance %) to slot it into the comparison table
+- [x] Run branch ablation on the modality-dropout model — spec-only 0.5933, ViT-dom abnormal 0.6% (failed activation); slotted into 4-way table (2026-07-12)
 - [ ] (optional, lower priority) decoupled-LR and gradient-magnitude-balancing remedies if time permits — otherwise the 3-remedy table (OGM-GE, modality-dropout, pretrained-init) vs baseline is already sufficient
 
 **Step 2 — statistical rigor (do BEFORE writing; this is the main gap to submission)**
