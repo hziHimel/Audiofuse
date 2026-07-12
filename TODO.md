@@ -65,11 +65,36 @@ Goal: turn the paper from "we found a fix" into "we systematically studied the p
 - [x] Run branch ablation on the modality-dropout model — spec-only 0.5933, ViT-dom abnormal 0.6% (failed activation); slotted into 4-way table (2026-07-12)
 - [ ] (optional, lower priority) decoupled-LR and gradient-magnitude-balancing remedies if time permits — otherwise the 3-remedy table (OGM-GE, modality-dropout, pretrained-init) vs baseline is already sufficient
 
-**Step 2 — statistical rigor (do BEFORE writing; this is the main gap to submission)**
-- [ ] Multi-seed (≥3 seeds, e.g. 1/2/3) for the key runs: random-init baseline, pretrained-init, OGM-GE, modality-dropout
-- [ ] Report mean ± std for full AUC, spec-only ablation AUC, and ViT-dominance % per remedy
-- [ ] Confirm the branch-specialization result (ViT→abnormal, CNN→normal) is stable across seeds, not a seed-1 artifact
-- [ ] (optional) paired significance test (e.g. DeLong on AUC, or bootstrap) between pretrained-init and baseline / OGM-GE
+**Step 2 — statistical rigor: 5-seed runs (do BEFORE writing; the main gap to submission)**
+
+Decision: **5 seeds total = {1, 2, 3, 4, 5}**. Seed 1 already done. Fully rigorous
+approach ("Option A"): pretrained-init gets its OWN branch pretraining per seed
+(no reuse of seed-1 branch weights), so a reviewer cannot attribute the result to
+one lucky initialization. Runs are sequential on the single MPS GPU (~2.5h/seed →
+~10h for the 4 remaining seeds; run as an overnight batch). Use `caffeinate -i -w
+<PID>` on every run.
+
+*2.1 — Orchestration*
+- [ ] Write `run_multiseed.py` (or a shell driver) that, for a given seed, runs the full pipeline in order and logs each to `logs/seed<N>_*.log`:
+      1. baseline (`train_pytorch.py` or `train_pytorch_gradflow.py`) → checkpoint
+      2. wave-only (`train_pytorch_waveonly.py`) → CNN weights for that seed
+      3. spec-only (`train_pytorch_speconly.py`) → ViT weights for that seed
+      4. pretrained-init (`train_pytorch_pretrained_init.py`) using THIS seed's branch weights
+      5. OGM-GE (`train_pytorch_ogm.py`)
+      6. modality-dropout (`train_pytorch_moddrop.py`)
+      7. branch ablation (`branch_ablation.py`) on each of: baseline, pretrained-init, OGM-GE, modality-dropout
+- [ ] Ensure every script writes seed-suffixed output dirs so seeds never overwrite each other
+
+*2.2 — Execute*
+- [ ] Run seeds 2, 3, 4, 5 through the full pipeline (seed 1 already complete)
+- [ ] Sanity-check each seed's logs for early-stopping anomalies / NaNs before trusting numbers
+
+*2.3 — Aggregate*
+- [ ] Collect per-seed metrics into one CSV: for each remedy × seed record full AUC, spec-only ablation AUC, wave-only ablation AUC, ViT-dominance% (normal/abnormal), F1, MCC
+- [ ] Compute mean ± std across the 5 seeds for every cell of the 4-way remedy comparison table
+- [ ] Confirm the branch-specialization result (ViT→abnormal, CNN→normal after pretrained-init) is stable across seeds, not a seed-1 artifact — flag any seed where it flips
+- [ ] (optional) paired significance test (DeLong on AUC, or bootstrap) between pretrained-init and baseline / OGM-GE
+- [ ] Replace all seed=1 numbers in the draft abstract + CHANGELOG comparison table with mean ± std
 
 **Step 3 — explainability / the "why" (the closing section; rests on Step 2 being stable)**
 - [ ] GradCAM (or attention rollout) on the ViT branch: visualize attended spectrogram patches for normal vs abnormal; test whether abnormal attention concentrates on murmur bands (~100–500 Hz) and irregular S1/S2 timing — gives a clinical reason the ViT specializes in abnormal detection
