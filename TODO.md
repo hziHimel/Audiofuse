@@ -154,6 +154,20 @@ Optional add-ons (only if a reviewer asks or time permits — do NOT front-load)
 
 ## Direction 2 — Transfer Learning to Other Biomedical Signals
 
+### 2.-1 Gradient-Dominance Generalization to a 2nd Dataset (future paper idea — 2026-07-14)
+
+Idea: strengthen the gradient-dominance findings (Direction 3.1) by replicating them
+on a SECOND dataset with the SAME dual-branch ViT+CNN architecture. Goal: show the
+phenomenon is architectural (about optimization dynamics), not a PhysioNet/cardiac
+quirk. If the ViT again dies in joint training and pretrained-init again revives it,
+the finding generalizes → lifts the contribution. Likely a separate follow-up paper.
+
+- [ ] Pick 2nd dataset — recommended **ICBHI 2017 lung sounds** (different pathology, still biomedical audio, keeps the clinical narrative; already needed for 2.1 transfer work). Alternatives: PASCAL heart sounds (weaker — same domain), ESC-50/UrbanSound8K (strongest generality but leaves biomedical framing).
+- [ ] Preprocess into the same dual input (log-Mel spectrogram + raw waveform); reuse the ICBHI pipeline built for §2.1
+- [ ] Run the full remedy pipeline on it: baseline + branch ablation (is ViT dead?), pretrained-init (does it revive?), gradient-flow trace
+- [ ] Report whether gradient dominance + the pretrained-init fix replicate → cross-dataset generalization claim
+- [ ] NOTE: do this only AFTER the PhysioNet clean-split rerun (Step 2.5); don't build on the leaky methodology. Bonus: the ICBHI preprocessing doubles as the input for the §2.1 transfer experiments.
+
 ### 2.0 Spectrogram-domain Transfer (new idea — 2026-06-29)
 
 - [ ] Freeze only the ViT (spectrogram) branch of the pretrained AudioFuse; attach a new head
