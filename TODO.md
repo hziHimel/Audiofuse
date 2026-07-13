@@ -107,11 +107,16 @@ metrics (partly explains AUC 0.9668 vs paper 0.8608). Current 5-seed runs are be
 finished ONLY to confirm the gradient-dominance hypothesis is seed-stable — those
 numbers are PROVISIONAL and must not appear in the final paper.
 
-- [ ] Build a deduplicated split: one row per unique recording (dedupe by recording ID / npy), drop the `validation/`-folder duplicates
-- [ ] Make the split recording-disjoint and class-stratified (ideally patient-disjoint if patient mapping is recoverable per PhysioNet subset)
-- [ ] Sanity-check the new split: zero filename/npy overlap between train and val, class ratio preserved
-- [ ] Re-run the full multi-seed pipeline (Step 2) on the clean split → these become the real publishable numbers
-- [ ] Compare clean-split baseline AUC vs the leaky 0.9668 to quantify how much was leakage
+Cleaning plan (do AFTER the current leaky-split 5-seed runs finish):
+- [ ] Step A — investigate metadata: check whether any patient→recording mapping file exists in the data folders (subset `a` may have some); read-only, decides whether patient-disjoint is achievable
+- [ ] Step B — source of truth: build the master list from `training-a…f` ONLY (one entry per physical recording, key = recording filename e.g. `a0001`); DROP all `validation/`-folder rows (they are the duplicate source)
+- [ ] Step C — deduplicate: collapse to one row per unique recording ID (duplicates confirmed to point to identical `.npy`, so lossless). Removes the 85 train↔val overlaps + within-train dupes. Expect ~3240 unique recordings (not 3541)
+- [ ] Step D — fresh split via `make_clean_split.py`: recording-disjoint (split the UNIQUE list), class-stratified (~77/23 preserved), ideally also stratified by subset a–f. Consider k-fold here for final rigor
+- [ ] Step E — verify (critical): assert ZERO filename overlap AND zero `.npy` overlap between train/val; class ratios preserved both sides; print a verification report. Add a `test_clean_split.py`
+- [ ] Step F — regenerate CSVs in the SAME column format (`filename,label,filepath,npy_filepath`) as `data/train_clean.csv` / `data/val_clean.csv` (or k-fold files) so all training scripts run unchanged
+- [ ] Step G — re-run the full multi-seed pipeline (Step 2) on the clean split → these become the REAL publishable numbers
+- [ ] Step H — compare clean-split baseline AUC vs the leaky 0.9668 to quantify how much was leakage; expect a modest drop (~0.90–0.93 range)
+- [ ] Honesty note for the paper: state "recording-disjoint, class/subset-stratified; patient-level disjointness not guaranteed for all subsets due to missing PhysioNet metadata" — the accepted standard for this dataset
 
 **Step 3 — explainability / the "why" (the closing section; rests on Step 2 being stable)**
 
