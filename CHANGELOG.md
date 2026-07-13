@@ -4,6 +4,31 @@ Format: newest entries first. Check off items as done. Note failed approaches.
 
 ---
 
+## 2026-07-14 — Multi-seed Step 2: seed 3 complete (PROVISIONAL — leaky split)
+
+3 seeds done. Core story seed-stable + a sharper finding: pretrained-init is the
+ONLY reliable remedy.
+
+**Spec-only ablation AUC (is the ViT alive?):**
+
+| Remedy | s1 | s2 | s3 | pattern |
+|--------|-----|-----|-----|---------|
+| Baseline | 0.4588 | 0.4028 | 0.4251 | ViT dead — stable |
+| Pretrained-init | 0.9621 | 0.9463 | 0.9541 | ViT alive — stable |
+| OGM-GE | 0.6155 | 0.4842 | 0.4403 | partial→mostly fails |
+| Modality dropout | 0.5933 | 0.9043 | 0.4116 | erratic |
+
+**Full AUC:** baseline 0.9668/0.9669/0.9669; pretrained 0.9677/0.9719/0.9720;
+OGM 0.9674/0.9335/0.9632; moddrop 0.9667/0.9691/0.9267.
+
+Pretrained-init gradient ratio (Phase-2, wave/spec): ~0.18 (s2), ~0.24 (s3) — well
+below 1 every seed vs baseline runaway 85x. Key upgrade to the story: OGM-GE only
+activated the ViT on seed 1; on seeds 2–3 the ViT is dead again. Modality dropout
+erratic. Only pretrained-init both activates the ViT AND is consistent. Seeds 4–5
+pending. All numbers PROVISIONAL (leaky split, see data-leakage-issue).
+
+---
+
 ## 2026-07-13 — Multi-seed Step 2: seed 2 complete (PROVISIONAL — leaky split)
 
 NOTE: on the LEAKY split (see data-leakage-issue). Numbers provisional, used only
