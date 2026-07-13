@@ -8,7 +8,8 @@ break. Steps are atomic (one training or one ablation each) and detected by the
 persistent seed-suffixed checkpoint / ablation CSV they produce.
 
 Usage:
-    python multiseed_status.py            # grid + next command
+    python multiseed_status.py            # LEAKY split (data/train.csv), outputs/...
+    python multiseed_status.py --clean    # CLEAN split (data/train_clean.csv), outputs/clean/...
     python multiseed_status.py --seed 2   # just seed 2's next command
 """
 
@@ -16,53 +17,63 @@ import os
 import argparse
 
 SEEDS = [1, 2, 3, 4, 5]
-DATA = "--train_csv data/train.csv --val_csv data/val.csv"
 
-# Each stage: (name, artifact_path_template, command_template). Ordered by
-# dependency: trainings before their ablations; branches before pretrained-init.
-STAGES = [
-    ("baseline",
-     "outputs/pytorch/best_seed{n}.pt",
-     f"python train_pytorch.py {DATA} --seeds {{n}} --output_dir outputs/pytorch/"),
-    ("waveonly",
-     "outputs/pytorch_waveonly/best_seed{n}.pt",
-     f"python train_pytorch_waveonly.py {DATA} --seeds {{n}} --output_dir outputs/pytorch_waveonly/"),
-    ("speconly",
-     "outputs/pytorch_speconly/best_seed{n}.pt",
-     f"python train_pytorch_speconly.py {DATA} --seeds {{n}} --output_dir outputs/pytorch_speconly/"),
-    ("pretrained_init",
-     "outputs/pytorch_pretrained_init/best_seed{n}.pt",
-     f"python train_pytorch_pretrained_init.py {DATA} "
-     "--spec_ckpt outputs/pytorch_speconly/best_seed{n}.pt "
-     "--wave_ckpt outputs/pytorch_waveonly/best_seed{n}.pt "
-     "--seeds {n} --output_dir outputs/pytorch_pretrained_init/"),
-    ("ogm",
-     "outputs/pytorch_ogm/best_seed{n}.pt",
-     f"python train_pytorch_ogm.py {DATA} --alpha 0.5 --seed {{n}} --output_dir outputs/pytorch_ogm/"),
-    ("moddrop",
-     "outputs/pytorch_moddrop/best_seed{n}.pt",
-     f"python train_pytorch_moddrop.py {DATA} --p 0.5 --seed {{n}} --output_dir outputs/pytorch_moddrop/"),
-    ("ablate_baseline",
-     "outputs/ablation_ms/baseline_seed{n}/ablation_results.csv",
-     "python branch_ablation.py --val_csv data/val.csv "
-     "--checkpoint outputs/pytorch/best_seed{n}.pt "
-     "--output_dir outputs/ablation_ms/baseline_seed{n}/"),
-    ("ablate_pretrained",
-     "outputs/ablation_ms/pretrained_seed{n}/ablation_results.csv",
-     "python branch_ablation.py --val_csv data/val.csv "
-     "--checkpoint outputs/pytorch_pretrained_init/best_seed{n}.pt "
-     "--output_dir outputs/ablation_ms/pretrained_seed{n}/"),
-    ("ablate_ogm",
-     "outputs/ablation_ms/ogm_seed{n}/ablation_results.csv",
-     "python branch_ablation.py --val_csv data/val.csv "
-     "--checkpoint outputs/pytorch_ogm/best_seed{n}.pt "
-     "--output_dir outputs/ablation_ms/ogm_seed{n}/"),
-    ("ablate_moddrop",
-     "outputs/ablation_ms/moddrop_seed{n}/ablation_results.csv",
-     "python branch_ablation.py --val_csv data/val.csv "
-     "--checkpoint outputs/pytorch_moddrop/best_seed{n}.pt "
-     "--output_dir outputs/ablation_ms/moddrop_seed{n}/"),
-]
+
+def build_stages(clean: bool):
+    """Build the 10-stage pipeline for either the leaky or clean split.
+
+    clean=False → original split (data/train.csv, outputs/…) — our seed 1–3 runs.
+    clean=True  → deduplicated split (data/train_clean.csv, outputs/clean/…) — the
+                  real publishable 5-seed runs and the teammate reproduction.
+    """
+    train = "data/train_clean.csv" if clean else "data/train.csv"
+    val   = "data/val_clean.csv"   if clean else "data/val.csv"
+    o     = "outputs/clean/" if clean else "outputs/"          # output prefix
+    data  = f"--train_csv {train} --val_csv {val}"
+
+    return [
+        ("baseline",
+         f"{o}pytorch/best_seed{{n}}.pt",
+         f"python train_pytorch.py {data} --seeds {{n}} --output_dir {o}pytorch/"),
+        ("waveonly",
+         f"{o}pytorch_waveonly/best_seed{{n}}.pt",
+         f"python train_pytorch_waveonly.py {data} --seeds {{n}} --output_dir {o}pytorch_waveonly/"),
+        ("speconly",
+         f"{o}pytorch_speconly/best_seed{{n}}.pt",
+         f"python train_pytorch_speconly.py {data} --seeds {{n}} --output_dir {o}pytorch_speconly/"),
+        ("pretrained_init",
+         f"{o}pytorch_pretrained_init/best_seed{{n}}.pt",
+         f"python train_pytorch_pretrained_init.py {data} "
+         f"--spec_ckpt {o}pytorch_speconly/best_seed{{n}}.pt "
+         f"--wave_ckpt {o}pytorch_waveonly/best_seed{{n}}.pt "
+         f"--seeds {{n}} --output_dir {o}pytorch_pretrained_init/"),
+        ("ogm",
+         f"{o}pytorch_ogm/best_seed{{n}}.pt",
+         f"python train_pytorch_ogm.py {data} --alpha 0.5 --seed {{n}} --output_dir {o}pytorch_ogm/"),
+        ("moddrop",
+         f"{o}pytorch_moddrop/best_seed{{n}}.pt",
+         f"python train_pytorch_moddrop.py {data} --p 0.5 --seed {{n}} --output_dir {o}pytorch_moddrop/"),
+        ("ablate_baseline",
+         f"{o}ablation_ms/baseline_seed{{n}}/ablation_results.csv",
+         f"python branch_ablation.py --val_csv {val} "
+         f"--checkpoint {o}pytorch/best_seed{{n}}.pt "
+         f"--output_dir {o}ablation_ms/baseline_seed{{n}}/"),
+        ("ablate_pretrained",
+         f"{o}ablation_ms/pretrained_seed{{n}}/ablation_results.csv",
+         f"python branch_ablation.py --val_csv {val} "
+         f"--checkpoint {o}pytorch_pretrained_init/best_seed{{n}}.pt "
+         f"--output_dir {o}ablation_ms/pretrained_seed{{n}}/"),
+        ("ablate_ogm",
+         f"{o}ablation_ms/ogm_seed{{n}}/ablation_results.csv",
+         f"python branch_ablation.py --val_csv {val} "
+         f"--checkpoint {o}pytorch_ogm/best_seed{{n}}.pt "
+         f"--output_dir {o}ablation_ms/ogm_seed{{n}}/"),
+        ("ablate_moddrop",
+         f"{o}ablation_ms/moddrop_seed{{n}}/ablation_results.csv",
+         f"python branch_ablation.py --val_csv {val} "
+         f"--checkpoint {o}pytorch_moddrop/best_seed{{n}}.pt "
+         f"--output_dir {o}ablation_ms/moddrop_seed{{n}}/"),
+    ]
 
 
 def is_done(stage_artifact: str, n: int) -> bool:
@@ -72,7 +83,12 @@ def is_done(stage_artifact: str, n: int) -> bool:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=None, help="only report this seed")
+    parser.add_argument("--clean", action="store_true",
+                        help="use the clean deduplicated split (data/*_clean.csv, outputs/clean/)")
     args = parser.parse_args()
+
+    STAGES = build_stages(args.clean)
+    print(f"[{'CLEAN split' if args.clean else 'LEAKY split'}]")
 
     seeds = [args.seed] if args.seed else SEEDS
     name_w = max(len(s[0]) for s in STAGES)
